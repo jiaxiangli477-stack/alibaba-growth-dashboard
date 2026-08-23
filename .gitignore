@@ -1,0 +1,8 @@
+# 只部署 V4 单页看板的 5 个文件，忽略旧版多页看板、测试截图和系统文件
+*
+!.gitignore
+!index.html
+!dashboard_data.js
+!app.js
+!styles.css
+!chart.umd.min.js

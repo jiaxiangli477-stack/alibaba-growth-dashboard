@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>国际站运营看板</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- 顶部深蓝 header -->
+<div class="topbar">
+  <span class="logo">国际站运营看板</span>
+  <select class="store-sel" id="storeSel"><option>深圳市莱华仕生物科技有限公司 (Shenzhen Lifeworth Biotechnology Co., Ltd.)</option></select>
+  <div class="seg">
+    <button id="segWeek" class="on">周</button>
+    <button id="segMonth">月</button>
+  </div>
+  <select class="store-sel" id="weekSel"></select>
+  <span class="date" id="dateLabel"></span>
+  <div class="spacer"></div>
+  <input id="globalSearch" class="global-search" placeholder="🔍 搜索板块/产品/指标..." autocomplete="off">
+  <div class="search-drop" id="searchDrop"></div>
+  <span class="user" id="userLabel">李嘉祥 (子账号)</span>
+  <button class="btn">改密码</button>
+  <button class="btn">退出</button>
+</div>
+
+<!-- 二级导航 -->
+<div class="navbar" id="navbar">
+  <div class="tab on" data-tab="period">周期看板</div>
+  <div class="tab" data-tab="focus">⭐ 重点关注</div>
+  <div class="tab" data-tab="ai">🔵 AI搜索</div>
+  <div class="tab" data-tab="trend">趋势对比</div>
+  <div class="tab" data-tab="exec">改造执行台</div>
+  <div class="tab" data-tab="compete">竞品对比</div>
+  <div class="tab" data-tab="peer">🏆 同行标杆</div>
+  <div class="tab" data-tab="admin">管理</div>
+</div>
+
+<div class="wrap">
+  <!-- ============ 周期看板 ============ -->
+  <div class="tabpanel on" id="panel-period"></div>
+  <!-- ============ 重点关注 ============ -->
+  <div class="tabpanel" id="panel-focus"></div>
+  <!-- ============ AI搜索 ============ -->
+  <div class="tabpanel" id="panel-ai"></div>
+  <!-- ============ 趋势对比 ============ -->
+  <div class="tabpanel" id="panel-trend"></div>
+  <!-- ============ 改造执行台 ============ -->
+  <div class="tabpanel" id="panel-exec"></div>
+  <!-- ============ 竞品对比 ============ -->
+  <div class="tabpanel" id="panel-compete"></div>
+  <!-- ============ 同行标杆 ============ -->
+  <div class="tabpanel" id="panel-peer"></div>
+  <!-- ============ 管理 ============ -->
+  <div class="tabpanel" id="panel-admin"></div>
+</div>
+
+<script src="chart.umd.min.js"></script>
+<script src="dashboard_data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
