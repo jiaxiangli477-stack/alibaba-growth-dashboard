@@ -8,6 +8,18 @@
 </head>
 <body>
 
+<!-- 密码锁（明文部署时自动跳过） -->
+<div id="lockOverlay" style="display:none;position:fixed;inset:0;background:#0b1f3a;z-index:9999;align-items:center;justify-content:center;font-family:-apple-system,'Segoe UI','Microsoft YaHei',sans-serif;">
+  <div style="background:#fff;border-radius:14px;padding:36px 40px;width:340px;max-width:88vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="font-size:42px;">🔒</div>
+    <h2 style="margin:12px 0 6px;color:#0b1f3a;font-size:20px;">看板已加密</h2>
+    <p style="color:#8a94a0;font-size:13px;margin:0 0 18px;">请输入访问密码</p>
+    <input id="lockPass" type="password" placeholder="访问密码" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #d8dee6;border-radius:8px;font-size:15px;margin-bottom:14px;outline:none;">
+    <button id="lockBtn" style="width:100%;padding:11px;background:#1668dc;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;">解锁看板</button>
+    <div id="lockErr" style="color:#d4380d;font-size:13px;margin-top:12px;display:none;">密码错误，请重试</div>
+  </div>
+</div>
+
 <!-- 顶部深蓝 header -->
 <div class="topbar">
   <span class="logo">国际站运营看板</span>
@@ -59,6 +71,50 @@
 
 <script src="chart.umd.min.js"></script>
 <script src="dashboard_data.js"></script>
-<script src="app.js"></script>
+<script>
+(function(){
+  function b64ToBytes(b64){
+    var bin = atob(b64), u = new Uint8Array(bin.length);
+    for (var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+    return u;
+  }
+  async function tryDecrypt(b64, pass){
+    var kb = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+    var key = await crypto.subtle.importKey('raw', kb, {name:'AES-GCM'}, false, ['decrypt']);
+    var buf = b64ToBytes(b64);
+    var pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:buf.slice(0,12), tagLength:128}, key, buf.slice(12));
+    return new TextDecoder().decode(pt);
+  }
+  function loadApp(){
+    var s = document.createElement('script');
+    s.src = 'app.js';
+    s.onload = function(){ if (document.readyState !== 'loading' && typeof boot === 'function') boot(); };
+    document.body.appendChild(s);
+  }
+  if (window.V4_DATA_ENCRYPTED){
+    var ov = document.getElementById('lockOverlay');
+    var btn = document.getElementById('lockBtn');
+    var inp = document.getElementById('lockPass');
+    var err = document.getElementById('lockErr');
+    ov.style.display = 'flex';
+    async function unlock(){
+      var pass = inp.value;
+      try{
+        var json = await tryDecrypt(window.V4_DATA_ENCRYPTED, pass);
+        window.V4_DATA = JSON.parse(json);
+        ov.style.display = 'none';
+        loadApp();
+      }catch(e){
+        err.style.display = 'block';
+      }
+    }
+    btn.onclick = unlock;
+    inp.addEventListener('keydown', function(e){ if(e.key==='Enter') unlock(); });
+    inp.focus();
+  } else {
+    loadApp();
+  }
+})();
+</script>
 </body>
 </html>
