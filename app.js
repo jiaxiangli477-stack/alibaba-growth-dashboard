@@ -305,17 +305,25 @@ function renderStaff(){
   s.forEach(function(x){
     var bad5 = x.fst5min!=null && x.fst5min < avg5;
     var badR = x.avg_reply!=null && x.avg_reply > avgR;
+    var hasIssue = x.over12h>0 || x.notfollow>0 || x.onlyhi>0 || x.unsat>0 || x.l3l4>0;
     var sug=''; var parts=[];
-    // 按具体数据给建议
+    // 成交/商机诊断
     if(x.rcvd_amt>0 && x.bus_to_ord!=null && x.bus_to_ord < 2){ parts.push('成交 '+money(x.rcvd_amt)+' 但商机转化率仅 '+pct(x.bus_to_ord)+'，把「怎么聊到成交」沉淀成话术SOP，复制给零成交的同事'); }
-    else if(x.rcvd_amt>0){ parts.push('达标（成交 '+money(x.rcvd_amt)+' '+num(x.order_cnt)+'单），是团队转化标杆，带教零成交成员'); }
+    else if(x.rcvd_amt>0){ parts.push('达标（成交 '+money(x.rcvd_amt)+' '+num(x.order_cnt)+'单），团队转化标杆，带教零成交成员'); }
     else if(x.tm>=40){ parts.push('TM接待 '+num(x.tm)+' 次却 0 成交——不是没商机，是跟单没闭环，逐条复盘卡在报价/MOQ/样品哪一步'); }
-    else { parts.push('商机量少('+num(x.tm)+')，先保承接速度'); }
+    else if(x.tm>=10){ parts.push('商机 '+num(x.tm)+' 次没成交，逐单复盘卡点：报价没回→换价格方案，要样品→快速寄样'); }
+    else { parts.push('商机量少('+num(x.tm)+')，先保承接速度，同时查询盘分流是否被大账号截流'); }
+    // 质检预警（按具体问题）
+    if(x.l3l4>0) parts.push('有 L3L4 大买家 '+x.l3l4+' 个，主管亲自跟进，别让小客服接大客户');
+    if(x.over12h>0) parts.push('超12h未回 '+x.over12h+' 次=直接丢商机，设交接机制或轮值');
+    if(x.notfollow>0) parts.push('未跟进 '+x.notfollow+' 次，买家问完没下文=没追单，48h 内二次触达');
+    if(x.onlyhi>0) parts.push('只发 Hi '+x.onlyhi+' 次，开场白太弱，改「产品+MOQ+交期」三段式');
+    if(x.unsat>0) parts.push('差评 '+x.unsat+' 次，逐单复盘不满原因（价格/交期/售后）');
+    // 回复速度
     if(bad5) parts.push('极速回复 '+pct(x.fst5min)+' 远低于店均 '+pct(avg5)+'，挂 30s 欢迎语+AI首响');
     if(badR) parts.push('平均回复 '+x.avg_reply+'h 过慢，开强提醒，目标压到 '+avgR+'h 内');
-    if(x.over12h>0) parts.push('超12h未回 '+x.over12h+' 次=直接丢商机，设交接机制');
     sug=parts.join('；');
-    var statusCls = (bad5||badR||x.over12h>0)? 'red':'green';
+    var statusCls = (bad5||badR||hasIssue)? 'red':'green';
     h+='<tr><td><div class="thumb-cell">'+pimg(x.avatar)+'<b>'+esc(x.name)+'</b></div></td>'+
       '<td class="num">'+num(x.tm)+'</td><td class="num">'+num(x.fb_pv)+'</td><td class="num">'+money(x.rcvd_amt)+'</td><td class="num">'+num(x.order_cnt)+'</td>'+
       '<td class="num '+(bad5?'red':'')+'">'+pct(x.fst5min)+'</td>'+
