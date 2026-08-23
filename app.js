@@ -1309,9 +1309,10 @@ function populatePeriodSel(){
 function boot(){
   loadScores();
   updateDateLabel();
-  // 店铺选择器
-  var ss=document.getElementById('storeSel'); ss.innerHTML='';
-  (D.stores||[]).forEach(function(s){ var o=document.createElement('option'); o.value=s.store_id; o.textContent=s.name; ss.appendChild(o); });
+  // 店铺切换器（双店：YH草本 / 莱华仕运动营养）
+  var ss=document.getElementById('storeSel');
+  var cur = window.V4_STORE || (function(){ try{ return localStorage.getItem('alibaba_store')||'yh'; }catch(e){ return 'yh'; } })();
+  if (ss){ ss.value = cur; ss.onchange = function(){ try{ localStorage.setItem('alibaba_store', this.value); }catch(e){} location.reload(); }; }
   // 周/月选择器
   populatePeriodSel();
   document.getElementById('userLabel').textContent = '李嘉祥 (子账号)';

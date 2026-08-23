@@ -23,7 +23,10 @@
 <!-- 顶部深蓝 header -->
 <div class="topbar">
   <span class="logo">国际站运营看板</span>
-  <select class="store-sel" id="storeSel"><option>深圳市莱华仕生物科技有限公司 (Shenzhen Lifeworth Biotechnology Co., Ltd.)</option></select>
+  <select class="store-sel" id="storeSel">
+    <option value="yh">YH·草本补充剂</option>
+    <option value="lifeworth">莱华仕·运动营养</option>
+  </select>
   <div class="seg">
     <button id="segWeek" class="on">周</button>
     <button id="segMonth">月</button>
@@ -71,6 +74,7 @@
 
 <script src="chart.umd.min.js"></script>
 <script src="dashboard_data.js"></script>
+<script src="dashboard_data_lifeworth.js"></script>
 <script>
 (function(){
   function b64ToBytes(b64){
@@ -91,17 +95,23 @@
     s.onload = function(){ if (document.readyState !== 'loading' && typeof boot === 'function') boot(); };
     document.body.appendChild(s);
   }
-  if (window.V4_DATA_ENCRYPTED){
+  var STORES = { yh: window.V4_DATA_ENCRYPTED, lifeworth: window.V4_DATA_ENCRYPTED_LW };
+  var currentStore = (function(){ try{ return localStorage.getItem('alibaba_store') || 'yh'; }catch(e){ return 'yh'; } })();
+  function getEnc(){ return STORES[currentStore] || STORES.yh; }
+  if (getEnc()){
     var ov = document.getElementById('lockOverlay');
     var btn = document.getElementById('lockBtn');
     var inp = document.getElementById('lockPass');
     var err = document.getElementById('lockErr');
+    var ss = document.getElementById('storeSel');
+    if (ss) ss.value = currentStore;
     ov.style.display = 'flex';
     async function unlock(){
       var pass = inp.value;
       try{
-        var json = await tryDecrypt(window.V4_DATA_ENCRYPTED, pass);
+        var json = await tryDecrypt(getEnc(), pass);
         window.V4_DATA = JSON.parse(json);
+        window.V4_STORE = currentStore;
         ov.style.display = 'none';
         loadApp();
       }catch(e){
