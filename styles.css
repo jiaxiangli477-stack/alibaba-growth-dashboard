@@ -161,6 +161,8 @@ td .pid{color:var(--muted);font-size:10px}
 .pm-list li{margin-bottom:3px}
 .btn-plan{color:var(--blue);border:1px solid var(--blue);background:#fff;border-radius:4px;padding:2px 10px;cursor:pointer;font-size:12px}
 .btn-plan:hover{background:var(--info-bg)}
+.btn-track{color:#b8860b;border:1px solid #e0b84c;background:#fffdf5;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;margin-right:2px}
+.btn-track.on{color:#fff;background:#e0a800;border-color:#e0a800}
 @media(max-width:900px){.pm-body{grid-template-columns:1fr}.pm-left{border-right:0}}
 .score-tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
 .score-tag.good{background:var(--good-bg);color:var(--green)}

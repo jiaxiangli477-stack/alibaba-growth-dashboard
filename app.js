@@ -401,7 +401,7 @@ function renderList(title, sub, key, noteKey){
       catList.map(function(c){return '<option>'+esc(c)+'</option>';}).join('')+'</select><span class="muted small">共 '+items.length+' 品</span></div>';
   }
   h+='<div class="tbl-scroll"><table><thead><tr>'+
-    '<th>#</th><th>产品</th><th class="num">搜索曝光</th><th class="num">搜索点击</th><th class="num">点击率</th><th class="num">商机</th><th class="num">广告曝光</th><th class="num">广告点击</th><th>AI评分</th><th>判定</th><th>建议（按品定制）</th></tr></thead><tbody id="body_'+noteKey+'"></tbody></table></div>';
+    '<th>#</th><th>产品</th><th class="num">全店曝光</th><th class="num">全店点击</th><th class="num">点击率</th><th class="num">商机</th><th class="num">广告曝光</th><th class="num">广告点击</th><th>AI评分</th><th>判定</th><th>建议（按品定制）</th></tr></thead><tbody id="body_'+noteKey+'"></tbody></table></div>';
   h+=noteBox(noteKey)+'</div>';
   window['_listItems_'+noteKey]=items;
   setTimeout(function(){ renderListBody(noteKey); }, 0);
@@ -418,7 +418,7 @@ function renderListBody(noteKey){
     var s=scoreOf(p.product_id);
     h+='<tr><td>'+(i+1)+'</td>'+
       '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div><div class="pid">'+esc(p.category||'')+' · '+esc(p.product_id)+'</div></div></div></td>'+
-      '<td class="num">'+num(p.impressions)+'</td><td class="num">'+num(p.clicks)+'</td><td class="num">'+pct(p.ctr)+'</td>'+
+      '<td class="num">'+num(p.total_imps)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.ad_imps)+'</td><td class="num">'+num(p.ad_clk)+'</td>'+
       '<td>'+gradeTag(s)+'</td>'+
       '<td>'+tag(p.label,p.label_typ)+' '+tag(p.ad_label,p.ad_typ)+'</td>'+
@@ -439,22 +439,54 @@ function dimMini(s){
   });
   return out.join(' ');
 }
+function getTrack(){ try{ return JSON.parse(localStorage.getItem('v4_new_track')||'{}'); }catch(e){ return {}; } }
+function setTrack(obj){ try{ localStorage.setItem('v4_new_track', JSON.stringify(obj)); }catch(e){} }
+function isTracked(pid){ return getTrack()[pid]!=='off'; }
+function toggleTrack(pid, on){ var t=getTrack(); if(on){ delete t[pid]; } else { t[pid]='off'; } setTrack(t); }
+function toggleManualTrack(pid, btn){
+  var t=getTrack();
+  if(t[pid]==='manual'){ delete t[pid]; if(btn){btn.textContent='☆追踪';btn.classList.remove('on');} }
+  else { t[pid]='manual'; if(btn){btn.textContent='★追踪中';btn.classList.add('on');} }
+  setTrack(t);
+}
+function isManualTracked(pid){ return getTrack()[pid]==='manual'; }
+
 function renderNewProduct(){
   var items=D.lists.new_product||[];
-  var h='<div class="section-title">九、🆕 AI 新品追踪 Top50 <span class="sub">每个新品的五维评分：AI识别/B2B转化/流量/广告/合规，哪里好哪里差一目了然</span></div>';
+  // 手动追踪的新品（从 AI 全量列表里查）
+  var manual=[];
+  var t=getTrack();
+  Object.keys(t).forEach(function(pid){
+    if(t[pid]==='manual'){
+      var p=(window._aiAll||[]).find(function(x){return x.product_id===pid;});
+      if(p) manual.push(p);
+    }
+  });
+  var h='<div class="section-title">九、🆕 AI 新品追踪 <span class="sub">勾选=追踪此新品；取消=不是新品（如仅改了日期）。可在 AI搜索列表点「☆追踪」手动加品。追踪状态保存在本机</span></div>';
   h+='<div class="card"><div class="tbl-scroll"><table><thead><tr>'+
-    '<th>#</th><th>新品</th><th>AI评分</th><th>好/差维度（细颗粒度）</th><th class="num">点击</th><th class="num">CTR</th><th class="num">询盘</th><th>状态</th></tr></thead><tbody>';
+    '<th class="num">追踪</th><th>#</th><th>新品</th><th>AI评分</th><th>好/差维度（细颗粒度）</th><th class="num">全店点击</th><th class="num">CTR</th><th class="num">询盘</th><th>状态</th></tr></thead><tbody>';
   items.forEach(function(p,i){
     var s=scoreOf(p.product_id);
-    h+='<tr><td>'+(i+1)+'</td>'+
+    var chk = isTracked(p.product_id) ? ' checked' : '';
+    h+='<tr><td class="num"><input type="checkbox" data-track="'+p.product_id+'"'+chk+' onchange="toggleTrack(\''+p.product_id+'\', this.checked)"></td><td>'+(i+1)+'</td>'+
       '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+'</div></div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
       '<td class="small">'+dimMini(s)+'</td>'+
-      '<td class="num">'+num(p.clicks)+'</td><td class="num">'+pct(p.ctr)+'</td><td class="num">'+num(p.inquiries)+'</td>'+
+      '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td><td class="num">'+num(p.inquiries)+'</td>'+
       '<td>'+tag(p.status,p.sty)+'</td></tr>';
   });
+  // 手动追加的新品（带「手动」标识）
+  manual.forEach(function(p,i){
+    var s=scoreOf(p.product_id);
+    h+='<tr><td class="num"><input type="checkbox" checked onchange="toggleManualTrack(\''+p.product_id+'\', this)"></td><td>手</td>'+
+      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+'</div></div></div></td>'+
+      '<td>'+gradeTag(s)+'</td>'+
+      '<td class="small">'+dimMini(s)+'</td>'+
+      '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td><td class="num">'+num(p.inquiries)+'</td>'+
+      '<td>'+tag('手动追踪','info')+'</td></tr>';
+  });
   h+='</tbody></table></div>';
-  h+='<div class="muted small">点评分标签看完整五维雷达（每个维度打分+原因+精准行动）。这是 AI 新品追踪的核心：不只看"跑没跑出来"，看"卡在哪个维度"。</div>';
+  h+='<div class="muted small">点评分标签看完整五维雷达。勾选控制「新品追踪」名单（本机保存，仅自己可见）；在 AI搜索列表里点「☆追踪」把任意产品手动加进来。</div>';
   h+=noteBox('newprod')+'</div>';
   return h;
 }
@@ -726,7 +758,7 @@ function renderFocus(){
     var s=scoreOf(p.product_id);
     h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
-      '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.clicks)+'</td><td class="num">'+pct(p.ctr)+'</td>'+
+      '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="small">'+(s?conciseAdvice(s):'')+'</td></tr>';
   });
   h+='</tbody></table></div></div>';
@@ -737,7 +769,7 @@ function renderFocus(){
     var s=scoreOf(p.product_id);
     h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
-      '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.clicks)+'</td><td class="num">'+pct(p.ctr)+'</td>'+
+      '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="small">'+(s?conciseAdvice(s):esc(p.sug))+'</td></tr>';
   });
   h+='</tbody></table></div></div>';
@@ -748,7 +780,7 @@ function renderFocus(){
     var s=scoreOf(p.product_id);
     h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
-      '<td class="num">'+num(p.clicks)+'</td><td class="num">'+pct(p.ctr)+'</td>'+
+      '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="small">'+(s?conciseAdvice(s):esc(p.sug))+'</td></tr>';
   });
   h+='</tbody></table></div></div>';
@@ -797,7 +829,7 @@ function renderAI(){
   var cats={}; all.forEach(function(p){ if(p.category) cats[p.category]=1; });
   Object.keys(cats).slice(0,30).forEach(function(c){ h=h.replace('<option value="">类目：全部</option>','<option value="">类目：全部</option><option>'+esc(c)+'</option>'); });
   h+='<div class="mb8 small">图例：'+tag('有商机','good')+' '+tag('高点击0商机','danger')+' '+tag('有曝光未起量','muted')+' '+tag('冷启动','muted')+'</div>';
-  h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th>AI评分</th><th class="num">商机</th><th class="num">搜索曝光</th><th class="num">搜索点击</th><th class="num">CTR</th><th class="num">广告曝光</th><th class="num">广告点击</th><th>判定</th><th>建议（按品定制）</th><th>作战方案</th></tr></thead><tbody id="aiTableBody"></tbody></table></div>';
+  h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th>AI评分</th><th class="num">商机</th><th class="num">全店曝光</th><th class="num">全店点击</th><th class="num">CTR</th><th class="num">广告曝光</th><th class="num">广告点击</th><th>判定</th><th>建议（按品定制）</th><th>作战方案</th></tr></thead><tbody id="aiTableBody"></tbody></table></div>';
   h+=noteBox('ai')+'</div>';
   el.innerHTML=h;
   window._aiAll = all;
@@ -822,10 +854,10 @@ function renderAITable(){
     var s=scoreOf(p.product_id);
     h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div><div class="pid">'+esc(p.category||'')+' · '+esc(p.product_id)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
-      '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.impressions)+'</td><td class="num">'+num(p.clicks)+'</td><td class="num">'+pct(p.ctr)+'</td><td class="num">'+num(p.ad_imps)+'</td><td class="num">'+num(p.ad_clk)+'</td>'+
+      '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.total_imps)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td><td class="num">'+num(p.ad_imps)+'</td><td class="num">'+num(p.ad_clk)+'</td>'+
       '<td>'+tag(p.label,p.label_typ)+'</td>'+
       '<td class="small">'+(s?conciseAdvice(s):'')+'</td>'+
-      '<td><button class="btn btn-plan" onclick="openPlan(\''+p.product_id+'\')">📝 作战方案</button></td></tr>';
+      '<td><button class="btn btn-track'+(isManualTracked(p.product_id)?' on':'')+'" onclick="toggleManualTrack(\''+p.product_id+'\', this)">'+(isManualTracked(p.product_id)?'★追踪中':'☆追踪')+'</button> <button class="btn btn-plan" onclick="openPlan(\''+p.product_id+'\')">📝 作战方案</button></td></tr>';
   });
   body.innerHTML=h;
 }
@@ -1000,9 +1032,9 @@ function renderProdTrend(pid){
   var h='<div class="insight info">历史周数据不可回填：数据参谋商品接口（week 模式）只返回最新一周、忽略历史日期。以下为本周（'+esc((D.meta||{}).week_label||'')+'）实际值；从下周起每周快照落库，自动累积逐期趋势。</div>';
   if(p){
     h+='<table><thead><tr><th>指标</th><th class="num">本周值</th><th>解读</th></tr></thead><tbody>'+
-      '<tr><td>搜索曝光</td><td class="num">'+num(p.impressions)+'</td><td>'+(p.impressions&&p.impressions>=1000?'曝光充足，看点击承接':'曝光偏低，补标题关键词')+'</td></tr>'+
-      '<tr><td>搜索点击</td><td class="num">'+num(p.clicks)+'</td><td>'+(p.clicks>=4?'点击正常':'点击少，主图/标题待优化')+'</td></tr>'+
-      '<tr><td>点击率</td><td class="num">'+pct(p.ctr)+'</td><td>'+(p.ctr>=3?'CTR 优秀':'CTR 低于3%，首图卖点弱')+'</td></tr>'+
+      '<tr><td>全店曝光</td><td class="num">'+num(p.total_imps)+'</td><td>'+(p.impressions&&p.impressions>=1000?'曝光充足，看点击承接':'曝光偏低，补标题关键词')+'</td></tr>'+
+      '<tr><td>搜索点击</td><td class="num">'+num(p.total_clk)+'</td><td>'+(p.clicks>=4?'点击正常':'点击少，主图/标题待优化')+'</td></tr>'+
+      '<tr><td>点击率</td><td class="num">'+pct(p.total_ctr)+'</td><td>'+(p.ctr>=3?'CTR 优秀':'CTR 低于3%，首图卖点弱')+'</td></tr>'+
       '<tr><td>商机（询盘+TM）</td><td class="num">'+num(p.opp)+'</td><td>'+(p.opp>0?'已出商机，抓成交':'0商机，修详情页/MOQ/价格')+'</td></tr>'+
       '<tr><td>询盘</td><td class="num">'+num(p.inquiries)+'</td><td rowspan="2">'+(p.opp>0?'商机已来，重点转报价成交':'无商机，先解决转化断点')+'</td></tr>'+
       '<tr><td>TM咨询</td><td class="num">'+num(p.tm)+'</td></tr>'+
