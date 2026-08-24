@@ -68,6 +68,12 @@ function openScore(pid){
       '<div class="dim-reason small muted">'+esc(d.reason)+'</div>';
   });
   h+='</div>';
+  // 置信度 + 评分与表现关系（4.3）
+  var confCls=s.confidence==='高'?'good':(s.confidence==='中'?'warn':(s.confidence==='低'?'danger':'muted'));
+  h+='<div class="pm-box"><h5>🎯 评分置信度 & 与表现的关系</h5><div class="pm-note">'+
+    '<div>'+tag('置信度：'+esc(s.confidence||'—'), confCls)+' <span class="small muted">（证据充分度：真实效果数据 + 视觉诊断 + 市场证据）</span></div>'+
+    '<div class="mt8"><b>评分 vs 实际表现</b>：'+esc(s.score_vs_perf||'')+'</div>'+
+  '</div></div>';
   // 市场趋势证据 & 建议（评分面板的市场趋势分依据）
   var me=s.market_evidence||{};
   if(me&&me.verdict){
@@ -151,7 +157,7 @@ function weekToFunnel(w){
     {key:'total_imps',label:'全店曝光',cur:w.total_imps,wow:wowOf(w,'total_imps'),rival_avg:w.total_imps_ra,rival_good:w.total_imps_rg,unit:''},
     {key:'camp_imps',label:'广告曝光',cur:w.camp_imps,wow:wowOf(w,'camp_imps'),rival_avg:w.camp_imps_ra,rival_good:w.camp_imps_rg,unit:''},
     {key:'camp_clk',label:'广告点击',cur:w.camp_clk,wow:wowOf(w,'camp_clk'),rival_avg:w.camp_clk_ra,rival_good:w.camp_clk_rg,unit:''},
-    {key:'opp',label:'商机(询盘+TM)',cur:(w.fb_cnt||0)+(w.fb_tm_uv||0),wow:wowOf(w,'opp'),unit:'',note:'事件数·未去重买家（询盘 '+num(w.fb_cnt)+' + TM '+num(w.fb_tm_uv)+'）'},
+    {key:'opp',label:'商机(询盘+TM)',cur:(w.fb_cnt||0)+(w.fb_tm_uv||0),wow:wowOf(w,'opp'),unit:'',note:'商机事件数·未去重（同一买家既询盘又TM会重复计入）。询盘成交意图>TM（TM为弱意向）。去重买家数/有效商机数接口未提供，无法与同行直接比较有效商机。'},
     {key:'fb_cnt',label:'询盘个数',cur:w.fb_cnt,wow:wowOf(w,'fb_cnt'),unit:''},
     {key:'fb_tm_uv',label:'TM咨询人数',cur:w.fb_tm_uv,wow:wowOf(w,'fb_tm_uv'),unit:''},
     {key:'uv_cnt',label:'访客',cur:w.uv_cnt,wow:wowOf(w,'uv_cnt'),rival_good:w.uv_cnt_rg,unit:''},
@@ -189,7 +195,7 @@ function monthToFunnel(M){
     {key:'total_imps',label:'全店曝光',cur:M.total_imps,wow:wowOf(M,'total_imps'),rival_avg:M.total_imps_ra,rival_good:M.total_imps_rg,unit:''},
     {key:'camp_imps',label:'广告曝光',cur:M.camp_imps,wow:wowOf(M,'camp_imps'),rival_avg:M.camp_imps_ra,rival_good:M.camp_imps_rg,unit:''},
     {key:'camp_clk',label:'广告点击',cur:M.camp_clk,wow:wowOf(M,'camp_clk'),rival_avg:M.camp_clk_ra,rival_good:M.camp_clk_rg,unit:''},
-    {key:'opp',label:'商机(询盘+TM)',cur:M.opp,wow:wowOf(M,'opp'),rival_avg:M.ab_cnt_ra,rival_good:M.ab_cnt_rg,unit:'',note:'询盘 '+num(M.fb_cnt)+' + TM '+num(M.fb_tm_uv)},
+    {key:'opp',label:'商机(询盘+TM)',cur:M.opp,wow:wowOf(M,'opp'),rival_avg:M.ab_cnt_ra,rival_good:M.ab_cnt_rg,unit:'',note:'商机事件数·未去重（询盘 '+num(M.fb_cnt)+' + TM '+num(M.fb_tm_uv)+'）。去重买家数/有效商机数接口未提供。'},
     {key:'fb_cnt',label:'询盘个数',cur:M.fb_cnt,wow:wowOf(M,'fb_cnt'),rival_avg:M.fb_cnt_ra,rival_good:M.fb_cnt_rg,unit:''},
     {key:'fb_tm_uv',label:'TM咨询人数',cur:M.fb_tm_uv,wow:wowOf(M,'fb_tm_uv'),rival_avg:M.fb_tm_ra,rival_good:M.fb_tm_rg,unit:''},
     {key:'uv_cnt',label:'访客',cur:M.uv_cnt,wow:wowOf(M,'uv_cnt'),rival_avg:M.uv_cnt_ra,rival_good:M.uv_cnt_rg,unit:''},
@@ -217,6 +223,10 @@ function getBearing(){
   var w=selectedWeek();
   return w ? weekToBearing(w) : (D.bearing||[]);
 }
+
+/* 周/月统一辅助（P0-4） */
+function periodWord(){ return PERIOD==='month' ? '本月' : '本周'; }
+function weeklyOnlyNote(){ return PERIOD==='month' ? '<div class="insight warn">⚠ 本模块仅接入周数据（月度口径未接入），以下展示最新一周数据，仅作参考。</div>' : ''; }
 
 /* ============ 周期看板 ============ */
 function renderPeriod(){
@@ -260,6 +270,8 @@ function renderPeriod(){
   h += renderHealth();
 
   // 榜单
+  // 榜单（周口径，月度时提示）
+  h += weeklyOnlyNote();
   h += renderList('四、⭐ 上升趋势·零花费榜','有商机 + 点击好 + 没给广告预算 → 优先接预算','zero_cost','zero');
   h += renderList('五、💰 高效低耗榜','零花费但有商机 → 单商机成本最低的一批','high_eff_low_cost','eff');
   h += renderList('六、商机榜 Top50','询盘+TM 合并的商机榜，按商机量排序','opp','opp');
@@ -297,7 +309,7 @@ function funnelVal(key){ var f=(D.funnel||[]).find(function(x){return x.key===ke
 function renderStaff(){
   var s=D.staff_cs||[];
   var avg5=D.store_avg_5min, avgR=D.store_avg_reply;
-  var h='<div class="section-title">客服接待质量 · 按子账号 <span class="sub">回复三项低于本店均值/达标线的标红，附下一步建议</span></div>';
+  var h=weeklyOnlyNote()+'<div class="insight warn">⚠ 客服跟进阶段/报价/样品/未成交原因/买家身份接口未接入，当前只有回复时效（过程指标），无法判断成交能力。</div><div class="section-title">客服接待质量 · 按子账号 <span class="sub">回复三项低于本店均值/达标线的标红，附下一步建议</span></div>';
   h+='<div class="card"><div class="tbl-scroll"><table><thead><tr>'+
     '<th>客服(子账号)</th><th class="num">TM接待</th><th class="num">询盘PV</th><th class="num">成交($)</th><th class="num">成交单</th>'+
     '<th class="num">极速回复率</th><th class="num">及时回复率</th><th class="num">平均回复时长</th><th class="num">商机→成交</th>'+
@@ -345,7 +357,7 @@ function bearingVal(key, field){ var b=(D.bearing||[]).find(function(x){return x
 function renderHealth(){
   var hh=D.health||{};
   var sr=D.star_rating||null;
-  var h='<div class="section-title">| 三、店铺健康（星等级 / 产品分层）</div>';
+  var h=weeklyOnlyNote()+'<div class="section-title">| 三、店铺健康（星等级 / 产品分层）</div>';
   h+='<div class="card"><div class="grid2">';
   // 星等级（真实数据）
   if(sr){
@@ -545,14 +557,14 @@ function saveNewManager(){
 /* ---------- 广告拆解（真实计划层）---------- */
 function renderAd(){
   var ap=D.ad_plans||null;
-  var h='<div class="section-title">| 广告花费拆解 <span class="sub">账户总览 + 计划层逐个判定</span></div>';
+  var h=weeklyOnlyNote()+'<div class="insight warn">⚠ 关键词级广告（关键词/匹配方式/出价/排名/单商机成本/订单）接口未接入，当前只有账户+计划层，计划层以下无法做关键词级判断。</div><div class="section-title">| 广告花费拆解 <span class="sub">账户总览 + 计划层逐个判定</span></div>';
   if(!ap || !ap.account){ 
     h+='<div class="card"><div class="muted">广告计划层数据未接入（需运行广告数据拉取）。</div>'+noteBox('ad')+'</div>'; return h;
   }
   var a=ap.account;
   h+='<div class="card">';
   h+='<div class="kpi-grid">'+
-    '<div class="kpi"><div class="k-label">本周广告花费</div><div class="k-val">¥'+num(a.spend)+'</div></div>'+
+    '<div class="kpi"><div class="k-label">'+periodWord()+'广告花费</div><div class="k-val">¥'+num(a.spend)+'</div></div>'+
     '<div class="kpi"><div class="k-label">点击 / 曝光</div><div class="k-val">'+num(a.clicks)+'<small> / '+num(a.impressions)+'</small></div></div>'+
     '<div class="kpi"><div class="k-label">点击成本 CPC</div><div class="k-val">¥'+num(a.cpc)+'</div></div>'+
     '<div class="kpi"><div class="k-label">商机量</div><div class="k-val">'+num(a.opp_cnt)+'<small>（L1+ '+num(a.l1_opp)+'）</small></div></div>'+
@@ -578,7 +590,7 @@ function renderAd(){
 function renderCountry(){
   var vs=D.v4_sections||null;
   var cm = (vs && vs.country_merged) || [];
-  var h='<div class="section-title">| 国家/地区效果 <span class="sub">行业需求/增速/供需 × 我的转化，看出该地区值不值得做、我做得怎么样</span></div>';
+  var h=weeklyOnlyNote()+'<div class="section-title">| 国家/地区效果 <span class="sub">行业需求/增速/供需 × 我的转化，看出该地区值不值得做、我做得怎么样</span></div>';
   if(!cm.length){ h+='<div class="card"><div class="muted">国家地区数据未接入。</div></div>'; return h; }
   var top=cm[0];
   var hot=cm.filter(function(c){return (c.ind_yoy||0)>30;});
@@ -616,6 +628,19 @@ function renderMarket(){
     hc.forEach(function(c){ h+='<span class="tag '+(c.inquiry_yoy>20?'good':'neutral')+'">'+esc(c.name)+' +'+num(c.inquiry_yoy)+'% · 供需比 '+num(c.supply_demand)+'</span> '; });
     h+='</div>';
   }
+  // 本店能力底座（4.8：能力匹配——配方/剂型/认证/试单MOQ/交期）
+  var cap=D.company_capabilities||{};
+  if(cap['剂型与MOQ']){
+    h+='<div class="card"><h4>🏭 本店能力底座（上新能力匹配）</h4>';
+    h+='<div class="insight">'+esc(cap['定位']||'')+'｜配方库 '+esc(cap['配方库']||'')+'｜交期 '+esc(cap['交期']||'')+'｜认证 '+esc(cap['认证']||'')+'｜市场 '+esc(cap['市场经验']||'')+'</div>';
+    h+='<div class="tbl-scroll"><table><thead><tr><th>剂型</th><th>条件</th><th class="num">试单 MOQ</th></tr></thead><tbody>';
+    cap['剂型与MOQ'].forEach(function(m){
+      h+='<tr><td>'+esc(m['剂型'])+'</td><td class="small muted">'+esc(m['条件']||'')+'</td><td class="num">'+esc(m['MOQ']||'')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    h+='<div class="muted small">⚠ '+esc(cap['待人工确认']||'')+'。合规红线：'+esc((cap['合规红线']||[]).join('；'))+'。</div>';
+    h+='</div>';
+  }
   // 热销品（带图）
   if(hp.length){
     h+='<div class="grid3">';
@@ -639,7 +664,7 @@ function renderChannel(){
   var best=null; ch.forEach(function(c){ if(!best||c.ab_rate>best.ab_rate) best=c; });
   var tot=0; ch.forEach(function(c){ tot+=c.uv; });
   h+='<div class="card">';
-  h+='<div class="insight">本周流量 '+num(tot)+' 访客。四渠道：'+ch.map(function(c){return esc(c.channel)+' '+num(c.share)+'%';}).join(' / ')+'。<b>商机率最高的是 '+esc(best.channel)+'（'+num(best.ab_rate)+'%）</b>——这是高质量流量，值得深挖。'+
+  h+='<div class="insight">'+periodWord()+'流量 '+num(tot)+' 访客。四渠道：'+ch.map(function(c){return esc(c.channel)+' '+num(c.share)+'%';}).join(' / ')+'。<b>商机率最高的是 '+esc(best.channel)+'（'+num(best.ab_rate)+'%）</b>——这是高质量流量，值得深挖。'+
     '搜索'+num(ch.length?ch[0].share:0)+'%+自增'+num(ch.length>1?ch[1].share:0)+'% 是自然基本盘（约67%），广告依赖度尚可；场景（含全站推广告）'+num(ch.length>2?ch[2].share:0)+'% 在成长。</div>';
   h+='<div class="tbl-scroll"><table><thead><tr><th>渠道</th><th class="num">访客</th><th class="num">占比</th><th class="num">商机率</th><th>解读</th></tr></thead><tbody>';
   ch.forEach(function(c){
@@ -658,8 +683,11 @@ function renderBuyerL1(){
   var cl=(vs&&vs.country_l1)||[];
   var h='<div class="section-title">| 买家 L1+ 分层 <span class="sub">L1+=近180天有下单能力的高价值买家，看流量质量</span></div>';
   h+='<div class="card">';
-  if(bi.length){
-    h+='<div class="insight">买家身份：'+bi.map(function(x){return esc(x.ident)+' '+num(x.all_rate)+'%';}).join(' / ')+'。<b>B端（零售商+批发商+制造商）占比 '+(bi.reduce(function(s,x){return s+(x.ident!=='线上零售商'||x.ident==='线上零售商'?0:0);},0), bi.length?num(Math.round(bi.reduce(function(s,x){return s+x.all_rate;},0))):'')+'%</b>，是健康 B2B 结构。</div>';
+  var bs=vs.b2b_stats||null;
+  if(bi.length && bs && bs.available){
+    h+='<div class="insight">买家身份：'+bi.map(function(x){return esc(x.ident)+' '+num(x.all_rate)+'%';}).join(' / ')+'。<b>B2B 占比 '+num(bs.b2b_rate)+'%</b>（'+esc(bs.definition)+'）；线上零售商 '+num(bs.online_retail_rate)+'% 单独统计。口径：'+esc(bs.scope)+'。</div>';
+  } else {
+    h+='<div class="insight warn">买家身份画像数据未接入（customer_profile_snapshot 为空），B2B 占比暂无法计算。请重新拉取数据参谋「买家画像」接口。</div>';
   }
   if(bi.length){
     h+='<div class="tbl-scroll"><table><thead><tr><th>买家身份</th><th class="num">全部买家占比</th><th class="num">L1+ 占比</th></tr></thead><tbody>';
@@ -743,17 +771,32 @@ function renderZeroEffect(){
 /* ---------- 本期总结 ---------- */
 function renderSummary(){
   var s=D.summary||{};
-  var h='<div class="section-title">| 本期总结与下期动作 <span class="sub">团队共享</span></div>';
+  var h='<div class="section-title">| 本期总结与下期动作 <span class="sub">本机保存（无后端共享）</span></div>';
   h+='<div class="card">';
   if(s.executive_summary){ h+='<div class="insight good"><b>核心结论</b>：'+esc(s.executive_summary)+'</div>'; }
   if(s.primary_problem){ h+='<div class="insight danger"><b>首要问题</b>：'+esc(s.primary_problem)+'<br><b>根因</b>：'+esc(s.primary_root_cause||'')+'</div>'; }
   if(s.largest_peer_gap||s.strongest_advantage){
     h+='<div class="insight">'+ (s.largest_peer_gap? '<b>最大对标缺口</b>：'+esc(s.largest_peer_gap)+'　':'') + (s.strongest_advantage? '<b>最强优势</b>：'+esc(s.strongest_advantage):'') +'</div>';
   }
-  if(s.top_actions && s.top_actions.length){
-    h+='<h4>下期动作</h4><ul style="margin-left:18px;line-height:1.8">';
-    s.top_actions.forEach(function(a){ h+='<li>'+esc(typeof a==='string'?a:(a.name||a.action||a.title||a.text||''))+'</li>'; });
-    h+='</ul>';
+  // P0-3：top_actions 可能是数组 [a,b] 或对象 {P1:[...],P2:[...],P3:[...]}，按优先级正确展开
+  var tacts=[];
+  if(s.top_actions){
+    if(Array.isArray(s.top_actions)){
+      tacts=s.top_actions.map(function(a){return {prio:a.prio||'',obj:a.obj||a.name||a.object||'',problem:a.problem||a.cur||'',action:typeof a==='string'?a:(a.action||a.chg||a.name||a.title||a.text||''),owner:a.owner||'',verify:a.verify||'',status:a.status||''};});
+    }else if(typeof s.top_actions==='object'){
+      Object.keys(s.top_actions).forEach(function(prio){
+        (s.top_actions[prio]||[]).forEach(function(a){tacts.push({prio:prio,obj:a.obj||a.name||a.object||'',problem:a.problem||a.cur||'',action:typeof a==='string'?a:(a.action||a.chg||a.name||a.title||a.text||''),owner:a.owner||'',verify:a.verify||'',status:a.status||''});});
+      });
+    }
+  }
+  if(tacts.length){
+    h+='<h4>下期动作（P1/P2/P3）</h4><div class="tbl-scroll"><table><thead><tr><th>优先</th><th>对象</th><th>当前问题</th><th>推荐动作</th><th>负责人</th><th>验证指标</th><th>状态</th></tr></thead><tbody>';
+    tacts.forEach(function(a){
+      h+='<tr><td>'+(a.prio?tag(a.prio,'p'+(a.prio.replace('P',''))):'—')+'</td>'+
+        '<td class="small">'+esc(a.obj)+'</td><td class="small">'+esc(a.problem)+'</td><td class="small">'+esc(a.action)+'</td>'+
+        '<td>'+esc(a.owner||'待分配')+'</td><td class="small">'+esc(a.verify||'—')+'</td><td>'+esc(a.status||'待办')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
   }
   if(s.top_opportunities && s.top_opportunities.length){
     h+='<h4>机会</h4><ul style="margin-left:18px;line-height:1.8">';
@@ -763,7 +806,7 @@ function renderSummary(){
   if(!s.executive_summary) h+='<div class="muted">本期 AI 决策摘要未生成，运行周度诊断后自动填充。</div>';
   // 下期动作 · 市场风口
   var hc=D.hot_categories||[];
-  var hp=D.hot_products||[];
+  var hp=(D.v4_sections&&D.v4_sections.hot_products_clean)||[];
   if(hc.length || hp.length){
     h+='<h4>下期动作 · 市场风口（上新方向）</h4>';
     if(hc.length){
@@ -865,7 +908,7 @@ function renderFocus(){
 function renderAI(){
   var el=document.getElementById('panel-ai');
   var h='<div class="section-title">AI搜索作战板</div>';
-  h+='<div class="card"><div class="insight info">AI搜索机制（2026版）：语义理解 + TrustScore + 成交就绪度，不再只按关键词匹配。工厂/CDMO 实力与认证是 TrustScore 关键信号。</div>';
+  h+='<div class="card"><div class="insight info">AI搜索机制（2026版）：语义理解 + TrustScore + 成交就绪度，不再只按关键词匹配。工厂/CDMO 实力与认证是 TrustScore 关键信号。<span class="muted">（注：以下 7 杠杆权重为内部经验阈值，非平台官方公开规则，请勿当平台事实引用）</span></div>';
   var levers=[
     ['1','补结构化属性','成分/认证等字段填满','最快'],
     ['2','自然语言文案','标题/详情覆盖采购意图',''],
@@ -1096,7 +1139,7 @@ function renderProdTrend(pid){
   ['opp','inquiry','tm','ctr','zero_cost','high_eff_low_cost'].forEach(function(k){
     if(p) return; (D.lists[k]||[]).forEach(function(x){ if(x.product_id===pid && !p) p=x; });
   });
-  var h='<div class="insight info">历史周数据不可回填：数据参谋商品接口（week 模式）只返回最新一周、忽略历史日期。以下为本周（'+esc((D.meta||{}).week_label||'')+'）实际值；从下周起每周快照落库，自动累积逐期趋势。</div>';
+  var h='<div class="insight warn">历史周数据不可回填：数据参谋商品接口（week 模式）只返回最新一周。以下为本周（'+esc((D.meta||{}).week_label||'')+'）实际值；从下周起每周快照落库，自动累积逐期趋势。<b>当前无「改标题/主图/详情/价格/广告/活动」事件关联，趋势只能观察、不能下因果结论。</b></div>';
   if(p){
     h+='<table><thead><tr><th>指标</th><th class="num">本周值</th><th>解读</th></tr></thead><tbody>'+
       '<tr><td>全店曝光</td><td class="num">'+num(p.total_imps)+'</td><td>'+(p.total_imps&&p.total_imps>=1000?'曝光充足，看点击承接':'曝光偏低，补标题关键词')+'</td></tr>'+
@@ -1162,7 +1205,7 @@ function renderExec(){
   });
   var storeTotal=0, storeDone=0;
   plan.forEach(function(b){ storeTotal+=b.tasks.length; storeDone+=b.tasks.filter(function(t){return taskStatus(b.id,t.field)==='已完成';}).length; });
-  var h='<div class="section-title">Listing 改造执行台 <span class="sub">选状态即保存，全员可见</span></div>';
+  var h='<div class="section-title">Listing 改造执行台 <span class="sub">状态/负责人/备注均为本机保存（非团队共享）</span></div>';
   h+='<div class="flex mb8">'+
     '<select style="padding:4px"><option>全部优先级</option><option>P0</option><option>P1</option><option>P2</option></select>'+
     '<select style="padding:4px"><option>全部状态</option><option>待办</option><option>进行中</option><option>已完成</option><option>不做</option></select>'+
