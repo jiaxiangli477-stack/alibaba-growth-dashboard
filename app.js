@@ -151,7 +151,7 @@ function weekToFunnel(w){
     {key:'total_imps',label:'全店曝光',cur:w.total_imps,wow:wowOf(w,'total_imps'),rival_avg:w.total_imps_ra,rival_good:w.total_imps_rg,unit:''},
     {key:'camp_imps',label:'广告曝光',cur:w.camp_imps,wow:wowOf(w,'camp_imps'),rival_avg:w.camp_imps_ra,rival_good:w.camp_imps_rg,unit:''},
     {key:'camp_clk',label:'广告点击',cur:w.camp_clk,wow:wowOf(w,'camp_clk'),rival_avg:w.camp_clk_ra,rival_good:w.camp_clk_rg,unit:''},
-    {key:'opp',label:'商机(询盘+TM)',cur:(w.fb_cnt||0)+(w.fb_tm_uv||0),wow:wowOf(w,'fb_cnt'),unit:'',note:'询盘 '+num(w.fb_cnt)+' + TM '+num(w.fb_tm_uv)},
+    {key:'opp',label:'商机(询盘+TM)',cur:(w.fb_cnt||0)+(w.fb_tm_uv||0),wow:wowOf(w,'opp'),unit:'',note:'事件数·未去重买家（询盘 '+num(w.fb_cnt)+' + TM '+num(w.fb_tm_uv)+'）'},
     {key:'fb_cnt',label:'询盘个数',cur:w.fb_cnt,wow:wowOf(w,'fb_cnt'),unit:''},
     {key:'fb_tm_uv',label:'TM咨询人数',cur:w.fb_tm_uv,wow:wowOf(w,'fb_tm_uv'),unit:''},
     {key:'uv_cnt',label:'访客',cur:w.uv_cnt,wow:wowOf(w,'uv_cnt'),rival_good:w.uv_cnt_rg,unit:''},
@@ -751,6 +751,22 @@ function renderFocus(){
     '<div class="kpi"><div class="k-label">高点击0商机</div><div class="k-val">'+num(dngCnt)+'</div><div class="k-meta muted">修转化</div></div>'+
     '<div class="kpi"><div class="k-label">风口类目</div><div class="k-val">'+num(hc.length)+'</div><div class="k-meta muted">上新方向</div></div>'+
   '</div></div>';
+  // 产品状态九宫格（按状态给动作，非排序）
+  var grid=(D.lists.state_grid||[]);
+  if(grid.length){
+    h+='<div class="card"><h4>产品状态诊断（九宫格） <span class="sub">按「状态 → 该状态专一动作」分层，不再统一写「优化标题/主图/详情」</span></h4>';
+    h+='<div class="flex" style="flex-wrap:wrap;gap:10px">';
+    grid.forEach(function(g){
+      var top=(g.top||[]).map(function(t){ return '<div class="small" style="margin:2px 0">· '+esc(t.title)+' <span class="muted">('+num(t.total_clk)+'点 / '+num(t.opp)+'商机)</span></div>'; }).join('');
+      var cls=(g.state==='deal_ok'||g.state==='has_opp'||g.state==='nat_opp_no_ad')?'good':(g.state==='zero_exp'||g.state==='ad_no_opp'||g.state==='clk_no_opp')?'danger':'warn';
+      h+='<div class="state-cell '+cls+'" style="flex:1 1 260px;min-width:240px;border:1px solid var(--line);border-radius:8px;padding:10px">';
+      h+='<div style="font-weight:600">'+esc(g.name)+' <span class="tag '+cls+'">'+num(g.count)+'个</span></div>';
+      h+='<div class="small" style="margin:6px 0">'+esc(g.action)+'</div>';
+      h+=top;
+      h+='</div>';
+    });
+    h+='</div></div>';
+  }
   // P1 有商机
   h+='<div class="card"><h4>P1 · 有商机，抓成交 <span class="sub">商机已来，按「问题→改法→优势」给一对一动作</span></h4>';
   h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th>AI评分</th><th class="num">商机</th><th class="num">点击</th><th class="num">CTR</th><th>下一步动作（资深运营口径）</th></tr></thead><tbody>';
