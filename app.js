@@ -134,7 +134,7 @@ function note(key){
   return v;
 }
 function noteBox(key){
-  return '<div class="note-box"><div class="note-label">本板块备注（团队共写·实时保存）</div>'+
+  return '<div class="note-box"><div class="note-label">本板块备注（本机保存，仅本浏览器可见）</div>'+
     '<textarea data-note="'+key+'" oninput="saveNote(this)">'+esc(note(key))+'</textarea></div>';
 }
 function saveNote(el){ localStorage.setItem('v4note_'+el.getAttribute('data-note'), el.value); }
