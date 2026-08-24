@@ -24,8 +24,8 @@
 <div class="topbar">
   <span class="logo">国际站运营看板</span>
   <select class="store-sel" id="storeSel">
-    <option value="yh">YH·草本补充剂</option>
     <option value="lifeworth">莱华仕·运动营养</option>
+    <option value="yh">YH·草本补充剂</option>
   </select>
   <div class="seg">
     <button id="segWeek" class="on">周</button>
@@ -74,7 +74,6 @@
 
 <script src="chart.umd.min.js"></script>
 <script src="dashboard_data.js"></script>
-<script src="dashboard_data_lifeworth.js"></script>
 <script>
 (function(){
   function b64ToBytes(b64){
@@ -95,9 +94,9 @@
     s.onload = function(){ if (document.readyState !== 'loading' && typeof boot === 'function') boot(); };
     document.body.appendChild(s);
   }
-  var STORES = { yh: window.V4_DATA_ENCRYPTED, lifeworth: window.V4_DATA_ENCRYPTED_LW };
-  var currentStore = (function(){ try{ return localStorage.getItem('alibaba_store') || 'yh'; }catch(e){ return 'yh'; } })();
-  function getEnc(){ return STORES[currentStore] || STORES.yh; }
+  var STORES = { lifeworth: window.V4_DATA_ENCRYPTED, yh: null };
+  var currentStore = (function(){ try{ return localStorage.getItem('alibaba_store') || 'lifeworth'; }catch(e){ return 'lifeworth'; } })();
+  function getEnc(){ return STORES[currentStore] || null; }
   if (getEnc()){
     var ov = document.getElementById('lockOverlay');
     var btn = document.getElementById('lockBtn');
@@ -121,6 +120,19 @@
     btn.onclick = unlock;
     inp.addEventListener('keydown', function(e){ if(e.key==='Enter') unlock(); });
     inp.focus();
+  } else if (currentStore === 'yh') {
+    var ov = document.getElementById('lockOverlay');
+    var h2 = ov.querySelector('h2');
+    var p = ov.querySelector('p');
+    var inp = document.getElementById('lockPass');
+    var btn = document.getElementById('lockBtn');
+    var ss = document.getElementById('storeSel');
+    if (ss) ss.value = 'yh';
+    if (h2) h2.textContent = 'YH 数据尚未接入';
+    if (p) p.textContent = 'YH·草本补充剂 店铺看板数据还未接入，请先切回「莱华仕·运动营养」。';
+    if (inp) inp.style.display = 'none';
+    if (btn) { btn.textContent = '切回莱华仕'; btn.onclick = function(){ try{ localStorage.setItem('alibaba_store','lifeworth'); }catch(e){} location.reload(); }; }
+    ov.style.display = 'flex';
   } else {
     loadApp();
   }

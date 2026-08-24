@@ -1243,7 +1243,7 @@ function renderExec(){
   // 单品优化（产品级）
   if(prodTasks.length){
     var pdone=prodTasks.filter(function(t){return taskStatus('PROD',t.field+t.pid)==='已完成';}).length;
-    h+='<div class="task-block"><div class="task-head"><span class="t-id">YH-PROD</span><span>🎯</span><span class="t-name">单品优化 (产品级)</span><div class="progress-bar"><i style="width:'+Math.round(pdone/Math.max(1,prodTasks.length)*100)+'%"></i></div><span class="progress">'+pdone+'/'+prodTasks.length+'</span></div>';
+    h+='<div class="task-block"><div class="task-head"><span class="t-id">LW-PROD</span><span>🎯</span><span class="t-name">单品优化 (产品级)</span><div class="progress-bar"><i style="width:'+Math.round(pdone/Math.max(1,prodTasks.length)*100)+'%"></i></div><span class="progress">'+pdone+'/'+prodTasks.length+'</span></div>';
     h+='<div class="tbl-scroll"><table><thead><tr><th>优先</th><th>字段/位置</th><th>现状 → 改成什么</th><th>状态</th><th>负责人</th><th>截止日</th><th>备注</th></tr></thead><tbody>';
     prodTasks.forEach(function(x){
       var s=scoreOf(x.pid);
@@ -1472,9 +1472,9 @@ function populatePeriodSel(){
 function boot(){
   loadScores();
   updateDateLabel();
-  // 店铺切换器（双店：YH草本 / 莱华仕运动营养）
+  // 店铺（莱华仕·运动营养）
   var ss=document.getElementById('storeSel');
-  var cur = window.V4_STORE || (function(){ try{ return localStorage.getItem('alibaba_store')||'yh'; }catch(e){ return 'yh'; } })();
+  var cur = window.V4_STORE || 'lifeworth';
   if (ss){ ss.value = cur; ss.onchange = function(){ try{ localStorage.setItem('alibaba_store', this.value); }catch(e){} location.reload(); }; }
   // 周/月选择器
   populatePeriodSel();
