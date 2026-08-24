@@ -453,8 +453,8 @@ function dimMini(s){
 }
 function getTrack(){ try{ return JSON.parse(localStorage.getItem('v4_new_track')||'{}'); }catch(e){ return {}; } }
 function setTrack(obj){ try{ localStorage.setItem('v4_new_track', JSON.stringify(obj)); }catch(e){} }
-function isTracked(pid){ return getTrack()[pid]!=='off'; }
-function toggleTrack(pid, on){ var t=getTrack(); if(on){ delete t[pid]; } else { t[pid]='off'; } setTrack(t); }
+function isTracked(pid){ return getTrack()[pid]==='on'; }
+function toggleTrack(pid, on){ var t=getTrack(); if(on){ t[pid]='on'; } else { delete t[pid]; } setTrack(t); }
 function toggleManualTrack(pid, btn){
   var t=getTrack();
   if(t[pid]==='manual'){ delete t[pid]; if(btn){btn.textContent='☆追踪';btn.classList.remove('on');} }
@@ -525,7 +525,7 @@ function openNewManager(){
   var rows=list.map(function(p){
     var d=newProdDate(p);
     var chk=isTracked(p.product_id)?' checked':'';
-    return '<tr><td class="num"><input type="checkbox" data-mpid="'+p.product_id+'"'+chk+'></td>'+
+    return '<tr><td class="num"><input type="checkbox" data-mpid="'+p.product_id+'"'+chk+' onchange="npSyncSelectAll()"></td>'+
       '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+' · '+(p.first_seen_at||'无日期')+'</div></div></div></td>'+
       '<td><input type="date" data-mdate="'+p.product_id+'" value="'+esc(d)+'"></td>'+
       '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+num(p.opp)+'</td></tr>';
@@ -534,24 +534,37 @@ function openNewManager(){
     '<div style="background:#fff;border-radius:12px;width:min(980px,94vw);max-height:86vh;display:flex;flex-direction:column;padding:20px;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h4 style="margin:0">管理新品清单 <span class="muted small" style="font-weight:normal">勾选=新品，取消=不是新品；上架日期可直接改</span></h4><button class="btn" onclick="closeNewManager()">✕</button></div>'+
     '<div style="margin-bottom:8px"><input id="np_search" placeholder="搜产品标题或ID..." style="padding:6px;width:320px"></div>'+
-    '<div style="flex:1;overflow:auto"><table><thead><tr><th class="num">选</th><th>产品</th><th>上架日期</th><th class="num">全店点击</th><th class="num">商机</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div style="flex:1;overflow:auto"><table><thead><tr><th class="num"><input type="checkbox" id="npSelectAll" onchange="npToggleAll(this.checked)" title="全选/取消全选" style="cursor:pointer"></th><th>产品</th><th>上架日期</th><th class="num">全店点击</th><th class="num">商机</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div style="margin-top:12px;text-align:right"><button class="btn btn-primary" onclick="saveNewManager()">保存并关闭</button></div>'+
     '</div></div>';
   var old=document.getElementById('npModal'); if(old) old.remove();
   var dv=document.createElement('div'); dv.innerHTML=html; document.body.appendChild(dv.firstChild);
   var si=document.getElementById('np_search');
   si.oninput=function(){ si.dataset.v=si.value; openNewManager(); var n=document.getElementById('np_search'); n.value=si.dataset.v; n.focus(); };
+  npSyncSelectAll();
 }
 function closeNewManager(){ var m=document.getElementById('npModal'); if(m) m.remove(); }
 function saveNewManager(){
   var t=getTrack();
-  document.querySelectorAll('#npModal [data-mpid]').forEach(function(cb){ if(cb.checked){ delete t[cb.dataset.mpid]; } else { t[cb.dataset.mpid]='off'; } });
+  document.querySelectorAll('#npModal [data-mpid]').forEach(function(cb){ if(cb.checked){ t[cb.dataset.mpid]='on'; } else { delete t[cb.dataset.mpid]; } });
   setTrack(t);
   var dates=getNewDates();
   document.querySelectorAll('#npModal [data-mdate]').forEach(function(inp){ var pid=inp.dataset.mdate; if(inp.value){ dates[pid]=inp.value; } else { delete dates[pid]; } });
   try{ localStorage.setItem('v4_new_dates', JSON.stringify(dates)); }catch(e){}
   closeNewManager();
   renderNewProduct();
+}
+function npToggleAll(on){
+  document.querySelectorAll('#npModal [data-mpid]').forEach(function(cb){ cb.checked = on; });
+  var sa = document.getElementById('npSelectAll');
+  if(sa){ sa.checked = on; sa.indeterminate = false; }
+}
+function npSyncSelectAll(){
+  var cbs = document.querySelectorAll('#npModal [data-mpid]');
+  var all = cbs.length > 0, any = false;
+  cbs.forEach(function(cb){ if(cb.checked){ any = true; } else { all = false; } });
+  var sa = document.getElementById('npSelectAll');
+  if(sa){ sa.checked = all; sa.indeterminate = any && !all; }
 }
 
 /* ---------- 广告拆解（真实计划层）---------- */
