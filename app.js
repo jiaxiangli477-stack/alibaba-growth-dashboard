@@ -450,45 +450,96 @@ function toggleManualTrack(pid, btn){
   setTrack(t);
 }
 function isManualTracked(pid){ return getTrack()[pid]==='manual'; }
+function getNewDates(){ try{ return JSON.parse(localStorage.getItem('v4_new_dates')||'{}'); }catch(e){ return {}; } }
+function setNewDate(pid, d){ var m=getNewDates(); if(d){ m[pid]=d; } else { delete m[pid]; } try{ localStorage.setItem('v4_new_dates', JSON.stringify(m)); }catch(e){} }
+
+function newProdDate(p){ return getNewDates()[p.product_id] || p.first_seen_at || ''; }
+function newProdStatus(p){
+  if((p.inquiries||0)>=1) return ['已出询盘·转正','good'];
+  if((p.total_clk||0)>=4) return ['有热度·观察','info'];
+  return ['冷启动中','muted'];
+}
 
 function renderNewProduct(){
-  var items=D.lists.new_product||[];
-  // 手动追踪的新品（从 AI 全量列表里查）
-  var manual=[];
-  var t=getTrack();
-  Object.keys(t).forEach(function(pid){
-    if(t[pid]==='manual'){
-      var p=(window._aiAll||[]).find(function(x){return x.product_id===pid;});
-      if(p) manual.push(p);
-    }
-  });
-  var h='<div class="section-title">九、🆕 AI 新品追踪 <span class="sub">勾选=追踪此新品；取消=不是新品（如仅改了日期）。可在 AI搜索列表点「☆追踪」手动加品。追踪状态保存在本机</span></div>';
+  var cand=D.new_candidates||[];
+  var ds=(document.getElementById('np_from')||{}).value||'';
+  var de=(document.getElementById('np_to')||{}).value||'';
+  // 追踪名单：默认有 first_seen_at 的都在（保持旧行为），取消勾选=排除，手改日期优先
+  var tracked=cand.filter(function(p){
+    if(!isTracked(p.product_id)) return false;              // 取消勾选 = 不是新品
+    if(!p.first_seen_at && !getNewDates()[p.product_id]) return false; // 无上架日期且未手改 → 不显示
+    var d=newProdDate(p);
+    if(ds && d < ds) return false;
+    if(de && d > de) return false;
+    return true;
+  }).sort(function(a,b){ return newProdDate(b).localeCompare(newProdDate(a)); });
+
+  var h='<div class="section-title">九、🆕 新品追踪 <span class="sub">手动勾选哪些是新品（改日期≠上架）。点「管理新品清单」从全部产品挑；上架日期可点单元格直改</span></div>';
+  h+='<div class="flex mb8" style="flex-wrap:wrap;gap:8px;align-items:center">'+
+    '<button class="btn" onclick="openNewManager()">➕ 管理新品清单</button>'+
+    '<span class="muted small">上架日期从</span>'+
+    '<input type="date" id="np_from" value="'+esc(ds)+'" onchange="renderNewProduct()" style="padding:4px">'+
+    '<span class="muted small">到</span>'+
+    '<input type="date" id="np_to" value="'+esc(de)+'" onchange="renderNewProduct()" style="padding:4px">'+
+    '<span class="muted small">共 '+tracked.length+' 个追踪新品</span>'+
+  '</div>';
   h+='<div class="card"><div class="tbl-scroll"><table><thead><tr>'+
-    '<th class="num">追踪</th><th>#</th><th>新品</th><th>AI评分</th><th>好/差维度（细颗粒度）</th><th class="num">全店点击</th><th class="num">CTR</th><th class="num">询盘</th><th>状态</th></tr></thead><tbody>';
-  items.forEach(function(p,i){
+    '<th class="num">追踪</th><th>#</th><th>新品</th><th>上架日期</th><th>AI评分</th><th class="num">全店曝光</th><th class="num">全店点击</th><th class="num">CTR</th><th class="num">商机</th><th>状态</th></tr></thead><tbody>';
+  tracked.forEach(function(p,i){
     var s=scoreOf(p.product_id);
-    var chk = isTracked(p.product_id) ? ' checked' : '';
-    h+='<tr><td class="num"><input type="checkbox" data-track="'+p.product_id+'"'+chk+' onchange="toggleTrack(\''+p.product_id+'\', this.checked)"></td><td>'+(i+1)+'</td>'+
-      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+'</div></div></div></td>'+
+    var d=newProdDate(p);
+    var st=newProdStatus(p);
+    h+='<tr><td class="num"><input type="checkbox" checked onchange="toggleTrack(\''+p.product_id+'\', this.checked); renderNewProduct();"></td><td>'+(i+1)+'</td>'+
+      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+' · '+esc(p.category||'')+'</div></div></div></td>'+
+      '<td><input type="date" value="'+esc(d)+'" onchange="setNewDate(\''+p.product_id+'\', this.value)"></td>'+
       '<td>'+gradeTag(s)+'</td>'+
-      '<td class="small">'+dimMini(s)+'</td>'+
-      '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td><td class="num">'+num(p.inquiries)+'</td>'+
-      '<td>'+tag(p.status,p.sty)+'</td></tr>';
-  });
-  // 手动追加的新品（带「手动」标识）
-  manual.forEach(function(p,i){
-    var s=scoreOf(p.product_id);
-    h+='<tr><td class="num"><input type="checkbox" checked onchange="toggleManualTrack(\''+p.product_id+'\', this)"></td><td>手</td>'+
-      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+'</div></div></div></td>'+
-      '<td>'+gradeTag(s)+'</td>'+
-      '<td class="small">'+dimMini(s)+'</td>'+
-      '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td><td class="num">'+num(p.inquiries)+'</td>'+
-      '<td>'+tag('手动追踪','info')+'</td></tr>';
+      '<td class="num">'+num(p.total_imps)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
+      '<td class="num">'+num(p.opp)+'</td>'+
+      '<td>'+tag(st[0],st[1])+'</td></tr>';
   });
   h+='</tbody></table></div>';
-  h+='<div class="muted small">点评分标签看完整五维雷达。勾选控制「新品追踪」名单（本机保存，仅自己可见）；在 AI搜索列表里点「☆追踪」把任意产品手动加进来。</div>';
+  h+='<div class="muted small">勾选=追踪此新品；取消=不是新品（如仅改过日期）。上架日期点单元格直改，或点「管理新品清单」批量挑。数据在本机保存（仅自己可见）。</div>';
   h+=noteBox('newprod')+'</div>';
+  h='<div id="newprod_section">'+h+'</div>';
+  var _ex=document.getElementById('newprod_section');
+  if(_ex){ _ex.outerHTML=h; }
   return h;
+}
+
+function openNewManager(){
+  var cand=D.new_candidates||[];
+  var q=(document.getElementById('np_search')||{}).value||'';
+  var list=cand.filter(function(p){ return !q || (p.title||'').toLowerCase().indexOf(q.toLowerCase())>=0 || p.product_id.indexOf(q)>=0; }).slice(0,300);
+  var rows=list.map(function(p){
+    var d=newProdDate(p);
+    var chk=isTracked(p.product_id)?' checked':'';
+    return '<tr><td class="num"><input type="checkbox" data-mpid="'+p.product_id+'"'+chk+'></td>'+
+      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+' · '+(p.first_seen_at||'无日期')+'</div></div></div></td>'+
+      '<td><input type="date" data-mdate="'+p.product_id+'" value="'+esc(d)+'"></td>'+
+      '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+num(p.opp)+'</td></tr>';
+  }).join('');
+  var html='<div id="npModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,Microsoft YaHei,sans-serif;">'+
+    '<div style="background:#fff;border-radius:12px;width:min(980px,94vw);max-height:86vh;display:flex;flex-direction:column;padding:20px;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h4 style="margin:0">管理新品清单 <span class="muted small" style="font-weight:normal">勾选=新品，取消=不是新品；上架日期可直接改</span></h4><button class="btn" onclick="closeNewManager()">✕</button></div>'+
+    '<div style="margin-bottom:8px"><input id="np_search" placeholder="搜产品标题或ID..." style="padding:6px;width:320px"></div>'+
+    '<div style="flex:1;overflow:auto"><table><thead><tr><th class="num">选</th><th>产品</th><th>上架日期</th><th class="num">全店点击</th><th class="num">商机</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div style="margin-top:12px;text-align:right"><button class="btn btn-primary" onclick="saveNewManager()">保存并关闭</button></div>'+
+    '</div></div>';
+  var old=document.getElementById('npModal'); if(old) old.remove();
+  var dv=document.createElement('div'); dv.innerHTML=html; document.body.appendChild(dv.firstChild);
+  var si=document.getElementById('np_search');
+  si.oninput=function(){ si.dataset.v=si.value; openNewManager(); var n=document.getElementById('np_search'); n.value=si.dataset.v; n.focus(); };
+}
+function closeNewManager(){ var m=document.getElementById('npModal'); if(m) m.remove(); }
+function saveNewManager(){
+  var t=getTrack();
+  document.querySelectorAll('#npModal [data-mpid]').forEach(function(cb){ if(cb.checked){ delete t[cb.dataset.mpid]; } else { t[cb.dataset.mpid]='off'; } });
+  setTrack(t);
+  var dates=getNewDates();
+  document.querySelectorAll('#npModal [data-mdate]').forEach(function(inp){ var pid=inp.dataset.mdate; if(inp.value){ dates[pid]=inp.value; } else { delete dates[pid]; } });
+  try{ localStorage.setItem('v4_new_dates', JSON.stringify(dates)); }catch(e){}
+  closeNewManager();
+  renderNewProduct();
 }
 
 /* ---------- 广告拆解（真实计划层）---------- */
@@ -740,7 +791,7 @@ function renderFocus(){
   var el=document.getElementById('panel-focus');
   var opp=(D.lists.opp||[]).slice(0,15);
   var zc=(D.lists.zero_cost||[]).slice(0,8);
-  var danger=(D.lists.ctr||[]).filter(function(p){return (p.opp||0)===0 && (p.clicks||0)>=4;}).slice(0,8);
+  var danger=(D.lists.ctr||[]).filter(function(p){return (p.opp||0)===0 && (p.total_clk||0)>=4;}).slice(0,8);
   var hc=(D.hot_categories||[]).slice(0,6);
   var h='<div class="section-title">重点关注 <span class="sub">机会雷达：按「为什么关注 + 下一步动作」分层</span></div>';
   // 顶部机会雷达
@@ -1048,9 +1099,9 @@ function renderProdTrend(pid){
   var h='<div class="insight info">历史周数据不可回填：数据参谋商品接口（week 模式）只返回最新一周、忽略历史日期。以下为本周（'+esc((D.meta||{}).week_label||'')+'）实际值；从下周起每周快照落库，自动累积逐期趋势。</div>';
   if(p){
     h+='<table><thead><tr><th>指标</th><th class="num">本周值</th><th>解读</th></tr></thead><tbody>'+
-      '<tr><td>全店曝光</td><td class="num">'+num(p.total_imps)+'</td><td>'+(p.impressions&&p.impressions>=1000?'曝光充足，看点击承接':'曝光偏低，补标题关键词')+'</td></tr>'+
-      '<tr><td>搜索点击</td><td class="num">'+num(p.total_clk)+'</td><td>'+(p.clicks>=4?'点击正常':'点击少，主图/标题待优化')+'</td></tr>'+
-      '<tr><td>点击率</td><td class="num">'+pct(p.total_ctr)+'</td><td>'+(p.ctr>=3?'CTR 优秀':'CTR 低于3%，首图卖点弱')+'</td></tr>'+
+      '<tr><td>全店曝光</td><td class="num">'+num(p.total_imps)+'</td><td>'+(p.total_imps&&p.total_imps>=1000?'曝光充足，看点击承接':'曝光偏低，补标题关键词')+'</td></tr>'+
+      '<tr><td>全店点击</td><td class="num">'+num(p.total_clk)+'</td><td>'+(p.total_clk>=4?'点击正常':'点击少，主图/标题待优化')+'</td></tr>'+
+      '<tr><td>点击率</td><td class="num">'+pct(p.total_ctr)+'</td><td>'+(p.total_ctr>=3?'CTR 优秀':'CTR 低于3%，首图卖点弱')+'</td></tr>'+
       '<tr><td>商机（询盘+TM）</td><td class="num">'+num(p.opp)+'</td><td>'+(p.opp>0?'已出商机，抓成交':'0商机，修详情页/MOQ/价格')+'</td></tr>'+
       '<tr><td>询盘</td><td class="num">'+num(p.inquiries)+'</td><td rowspan="2">'+(p.opp>0?'商机已来，重点转报价成交':'无商机，先解决转化断点')+'</td></tr>'+
       '<tr><td>TM咨询</td><td class="num">'+num(p.tm)+'</td></tr>'+
