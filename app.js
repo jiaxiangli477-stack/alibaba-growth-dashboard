@@ -455,6 +455,7 @@ function getTrack(){ try{ return JSON.parse(localStorage.getItem('v4_new_track')
 function setTrack(obj){ try{ localStorage.setItem('v4_new_track', JSON.stringify(obj)); }catch(e){} }
 function isTracked(pid){ return getTrack()[pid]==='on'; }
 function toggleTrack(pid, on){ var t=getTrack(); if(on){ t[pid]='on'; } else { delete t[pid]; } setTrack(t); }
+function clearAllTrack(){ setTrack({}); if(typeof renderNewProduct==='function') renderNewProduct(); }
 function toggleManualTrack(pid, btn){
   var t=getTrack();
   if(t[pid]==='manual'){ delete t[pid]; if(btn){btn.textContent='☆追踪';btn.classList.remove('on');} }
@@ -489,6 +490,7 @@ function renderNewProduct(){
   var h='<div class="section-title">九、🆕 新品追踪 <span class="sub">手动勾选哪些是新品（改日期≠上架）。点「管理新品清单」从全部产品挑；上架日期可点单元格直改</span></div>';
   h+='<div class="flex mb8" style="flex-wrap:wrap;gap:8px;align-items:center">'+
     '<button class="btn" onclick="openNewManager()">➕ 管理新品清单</button>'+
+    '<button class="btn" onclick="clearAllTrack()">取消全选</button>'+
     '<span class="muted small">上架日期从</span>'+
     '<input type="date" id="np_from" value="'+esc(ds)+'" onchange="renderNewProduct()" style="padding:4px">'+
     '<span class="muted small">到</span>'+
@@ -501,7 +503,7 @@ function renderNewProduct(){
     var s=scoreOf(p.product_id);
     var d=newProdDate(p);
     var st=newProdStatus(p);
-    h+='<tr><td class="num"><input type="checkbox" checked onchange="toggleTrack(\''+p.product_id+'\', this.checked); renderNewProduct();"></td><td>'+(i+1)+'</td>'+
+    h+='<tr><td class="num"><input type="checkbox"'+(isTracked(p.product_id)?' checked':'')+' onchange="toggleTrack(\''+p.product_id+'\', this.checked); renderNewProduct();"></td><td>'+(i+1)+'</td>'+
       '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+' · '+esc(p.category||'')+'</div></div></div></td>'+
       '<td><input type="date" value="'+esc(d)+'" onchange="setNewDate(\''+p.product_id+'\', this.value)"></td>'+
       '<td>'+gradeTag(s)+'</td>'+
@@ -533,7 +535,7 @@ function openNewManager(){
   var html='<div id="npModal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,Microsoft YaHei,sans-serif;">'+
     '<div style="background:#fff;border-radius:12px;width:min(980px,94vw);max-height:86vh;display:flex;flex-direction:column;padding:20px;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h4 style="margin:0">管理新品清单 <span class="muted small" style="font-weight:normal">勾选=新品，取消=不是新品；上架日期可直接改</span></h4><button class="btn" onclick="closeNewManager()">✕</button></div>'+
-    '<div style="margin-bottom:8px"><input id="np_search" placeholder="搜产品标题或ID..." style="padding:6px;width:320px"></div>'+
+    '<div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="np_search" placeholder="搜产品标题或ID..." style="padding:6px;width:300px"><button class="btn" type="button" onclick="npToggleAll(true)">全选</button><button class="btn" type="button" onclick="npToggleAll(false)">取消全选</button></div>'+
     '<div style="flex:1;overflow:auto"><table><thead><tr><th class="num"><input type="checkbox" id="npSelectAll" onchange="npToggleAll(this.checked)" title="全选/取消全选" style="cursor:pointer"></th><th>产品</th><th>上架日期</th><th class="num">全店点击</th><th class="num">商机</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div style="margin-top:12px;text-align:right"><button class="btn btn-primary" onclick="saveNewManager()">保存并关闭</button></div>'+
     '</div></div>';
