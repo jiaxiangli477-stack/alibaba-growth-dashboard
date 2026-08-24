@@ -557,7 +557,7 @@ function saveNewManager(){
 /* ---------- 广告拆解（真实计划层）---------- */
 function renderAd(){
   var ap=D.ad_plans||null;
-  var h=weeklyOnlyNote()+'<div class="insight warn">⚠ 关键词级广告（关键词/匹配方式/出价/排名/单商机成本/订单）接口未接入，当前只有账户+计划层，计划层以下无法做关键词级判断。</div><div class="section-title">| 广告花费拆解 <span class="sub">账户总览 + 计划层逐个判定</span></div>';
+  var h=weeklyOnlyNote()+'<div class="insight warn">⚠ 关键词级搜索广告（直通车）10 个计划全暂停、本周 0 花费 → 无关键词/产品搜索数据（是「没投」不是接口缺）。全站推产品级数据见下方「产品级全站推 Top」。</div><div class="section-title">| 广告花费拆解 <span class="sub">账户总览 + 计划层逐个判定</span></div>';
   if(!ap || !ap.account){ 
     h+='<div class="card"><div class="muted">广告计划层数据未接入（需运行广告数据拉取）。</div>'+noteBox('ad')+'</div>'; return h;
   }
@@ -583,6 +583,19 @@ function renderAd(){
       '<td>'+tag(c.judgment,c.judgment_type)+'</td><td class="muted">'+esc(c.suggestion)+'</td></tr>';
   });
   h+='</tbody></table></div>'+noteBox('ad')+'</div>';
+  // 产品级全站推 Top（4.5）
+  var adp=D.ad_products||[];
+  if(adp.length){
+    h+='<div class="card"><h4>产品级全站推 Top '+Math.min(20,adp.length)+' <span class="sub">按点击降序</span></h4>';
+    h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th class="num">曝光</th><th class="num">点击</th><th class="num">CTR</th><th class="num">询盘</th><th class="num">TM</th><th class="num">订单</th><th class="num">商机</th><th class="num">商机转化率</th><th class="num">L1+点击占比</th></tr></thead><tbody>';
+    adp.slice(0,20).forEach(function(p,i){
+      h+='<tr><td>'+(i+1)+'</td><td class="small"><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+'</div></td>'+
+        '<td class="num">'+num(p.imps)+'</td><td class="num">'+num(p.clk)+'</td><td class="num">'+num(p.ctr)+'%</td>'+
+        '<td class="num">'+num(p.inquiries)+'</td><td class="num">'+num(p.tm)+'</td><td class="num">'+num(p.orders)+'</td>'+
+        '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.opp_rate)+'%</td><td class="num">'+num(p.l1_rate)+'%</td></tr>';
+    });
+    h+='</tbody></table></div></div>';
+  }
   return h;
 }
 
