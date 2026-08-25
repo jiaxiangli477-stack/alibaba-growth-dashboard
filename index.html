@@ -72,8 +72,9 @@
   <div class="tabpanel" id="panel-admin"></div>
 </div>
 
-<script src="chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="dashboard_data.js"></script>
+<script src="dashboard_data_yh.js"></script>
 <script>
 (function(){
   function b64ToBytes(b64){
@@ -94,7 +95,7 @@
     s.onload = function(){ if (document.readyState !== 'loading' && typeof boot === 'function') boot(); };
     document.body.appendChild(s);
   }
-  var STORES = { lifeworth: window.V4_DATA_ENCRYPTED, yh: null };
+  var STORES = { lifeworth: window.V4_DATA_ENCRYPTED, yh: window.V4_DATA_ENCRYPTED_YH };
   var currentStore = (function(){ try{ return localStorage.getItem('alibaba_store') || 'lifeworth'; }catch(e){ return 'lifeworth'; } })();
   function getEnc(){ return STORES[currentStore] || null; }
   if (getEnc()){
