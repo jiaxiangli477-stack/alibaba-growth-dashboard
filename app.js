@@ -675,7 +675,8 @@ function renderMarket(){
     hp.slice(0,18).forEach(function(p){
       h+='<div class="prod-card"><div class="thumb">'+(p.image? '<img src="'+esc(p.image)+'" loading="lazy" onerror="this.style.display=\'none\'">':'<div class="noimg">无图</div>')+'</div>'+
         '<div class="t small">'+esc((p.title||'').slice(0,55))+'</div>'+
-        '<div class="muted small">'+esc(p.category||'')+'</div></div>';
+        '<div class="muted small">'+esc(p.category||'')+'</div>'+
+        (p.reason?'<div class="reason small">'+esc(p.reason)+'</div>':'')+'</div>';
     });
     h+='</div>';
   }
