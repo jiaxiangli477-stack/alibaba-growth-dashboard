@@ -1022,85 +1022,130 @@ function mtForCat(pid, it){
 function openPlan(pid){
   var wp=(D.war_plans&&D.war_plans[pid])||null;
   var it=findItem(pid);
+  var s=scoreOf(pid);
   var title=(wp&&wp.title)||(it&&it.title)||pid;
   var dp=(wp&&wp.deep_plan)||{};
   var ov=document.createElement('div'); ov.className='modal-overlay';
-  ov.innerHTML = planModalHtml(pid, title, wp, dp, it);
+  ov.innerHTML = planModalHtml(pid, title, wp, dp, it, s);
   document.body.appendChild(ov);
   ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
 }
-function planModalHtml(pid, title, wp, dp, it){
-  var g = dp['1_why_selected'] || '';
-  var problem = dp['2_current_problem'] || '';
-  var evidence = dp['3_data_evidence'] || '';
-  var peer = dp['5_peer_gap'] || '';
-  var listing = dp['7_listing_diagnosis'] || '';
-  var root = dp['9_root_cause'] || '';
-  var prim = dp['10_primary_action'] || (wp?wp.primary_action:'') || '';
-  var dont = dp['12_do_not_change'] || '';
-  var intent = (wp&&wp.buyer_intent) || dp['6_buyer_intent'] || '';
-  var titles = (wp&&wp.candidate_titles) || [];
-  var modules = (wp&&wp.detail_modules) || [];
-  var imgBrief = (wp&&wp.image_brief) || '';
-  var adc = it? (it.ad_clk||0) : 0;
-  var inq = it? (it.inquiries||0) : 0;
 
-  // 5 大打法杠杆
-  var levers = [
-    {icon:'🏅',name:'排名',txt:'补齐必填属性与视频，把质量分抬进优品，稳住并放大询盘'},
-    {icon:'📈',name:'询盘',txt: prim? (esc(prim)) : ('关键词自然语言化(整句意图)+承接提速(30秒响应)')},
-    {icon:'💰',name:'广告花费',txt: adc>0 ? ('广告在投(点击'+adc+')但需看商机产出，无商机就收') : ('零花费出询盘=最该加预算，小步试投精准长尾词，单询盘成本可控再放大')},
-    {icon:'🔥',name:'爆品打法',txt:'差异化定位：功能+定制感突出，补齐信任要素让它稳定出量'},
-    {icon:'⭐',name:'评价',txt:'当前0评价=最大信任缺口，两周内先攒3-5条带图评价'},
+function genericSeniorMoves(it){
+  var imps=it?(it.impressions||0):0, clk=it?(it.clicks||0):0;
+  var inq=it?(it.inquiries||0):0, tm=it?(it.tm||0):0, opp=inq+tm, adc=it?(it.ad_clk||0):0;
+  if(opp>0) return [
+    '响应：30秒内响应，第一句问目标市场+MOQ+定制需求，别只发目录',
+    'OEM能力：详情页首屏放 OEM/ODM 能力+交期+认证墙，让买家敢下单',
+    (adc>0?'广告在投(点击'+adc+')，有商机产出就小步加预算，无产出就收':'零广告出商机=纯自然流量，小步试投精准长尾放大'),
+    '报价：附 3 档 MOQ 价 + 打样周期 + 交付条款',
+    '信任：两周内攒 3-5 条带图评价，补信任缺口'
   ];
-  // 主图 6 张脚本
-  var imgs = imgBrief ? [imgBrief] : [
+  if(clk>=10) return [
+    '详情页首屏放价格/MOQ/定制/交期四要素，别让买家翻半天',
+    '主图加痛点钩子+核心卖点一句话',
+    '认证墙+工厂规模+配方数+年限排一屏',
+    'FAQ 前置解决合规/起订/样品疑虑',
+    '价格/MOQ 对标同行，别劝退买家'
+  ];
+  if(imps>=1000) return [
+    '主图重做：白底+痛点钩子+认证，首图别只放产品图',
+    '标题前50字符放核心品类词+材质+用途，覆盖采购意图',
+    '补全必填属性+视频，把质量分抬进优品',
+    '确认类目归属正确，错类目丢曝光',
+    '改完观察 1 周 CTR 变化再迭代'
+  ];
+  return [
+    '小预算试投精准长尾词，先买基础曝光',
+    '6 张主图+视频一次补齐，提升 AI 搜索识别',
+    '报名平台新品/品类活动借流量扶持',
+    '标题覆盖核心词+用途+定制',
+    '给 2 周观察期，无起色再换打法'
+  ];
+}
+
+function planModalHtml(pid, title, wp, dp, it, s){
+  var imps=it?(it.impressions||0):0, clk=it?(it.clicks||0):0, ctr=it?(it.ctr||0):0;
+  var inq=it?(it.inquiries||0):0, tm=it?(it.tm||0):0, opp=inq+tm;
+  var adc=it?(it.ad_clk||0):0;
+  var grade=s?(s.grade||''):'', gcls=s?(s.gcls||''):'';
+  var funnel=s?(s.funnel||[]):[];
+  var good=s?(s.good||[]):[], bad=s?(s.bad||[]):[], problems=s?(s.problems||[]):[];
+  var actions=s?(s.actions||[]):[];
+  var advice=s?(s.advice||{}):{}, playbook=s?(s.playbook||{}):{};
+  var dp_problem=dp['2_current_problem']||'', dp_root=dp['9_root_cause']||'', dp_evidence=dp['3_data_evidence']||'';
+  var dp_peer=dp['5_peer_gap']||'', dp_listing=dp['7_listing_diagnosis']||'';
+  var dont=dp['12_do_not_change']||'';
+  var intent=(wp&&wp.buyer_intent)||dp['6_buyer_intent']||'';
+  var titles=(wp&&wp.candidate_titles)||[];
+  var imgBrief=(wp&&wp.image_brief)||'';
+
+  // 五大打法：优先 playbook.moves → actions → 通用资深逻辑
+  var moves=(playbook.moves&&playbook.moves.length)?playbook.moves.slice(0,5)
+           :(actions&&actions.length)?actions.slice(0,5)
+           :genericSeniorMoves(it);
+  var mvIcons=['⚡','🎯','💰','🏭','⭐'];
+
+  // 战况诊断（短板）
+  function diagTxt(){
+    if(bad.length||problems.length){
+      var arr=bad.concat(problems);
+      return arr.slice(0,4).map(function(x){return '• '+esc(x);}).join('<br>');
+    }
+    if(dp_problem||dp_root||dp_evidence){
+      return (dp_problem?'<b>问题</b>：'+esc(dp_problem):'')+(dp_root?'<br><b>根因</b>：'+esc(dp_root):'')+(dp_evidence?'<br><b>数据</b>：'+esc(dp_evidence):'')+(dp_peer?'<br><b>对标</b>：'+esc(dp_peer):'')+(dp_listing?'<br><b>Listing</b>：'+esc(dp_listing):'');
+    }
+    var s2='• 全店曝光 '+num(imps)+'、点击 '+num(clk)+'、CTR '+pct(ctr)+'、商机 '+opp+'（询盘'+inq+'/TM'+tm+'）';
+    s2+= opp>0?' — 重点把商机转成交':(clk>=10?' — 点击没转商机，详情页没接住':(imps>=1000?' — 曝光有但没人点，主图/标题要改':' — 曝光基数太小，先解决起量'));
+    return s2;
+  }
+
+  // 目标 / 定位
+  var goalTxt=playbook.positioning||advice.focus||dp['1_why_selected']||'';
+  if(!goalTxt) goalTxt=opp>0?('有商机 '+opp+'，目标稳到 '+Math.max(2,Math.ceil(opp*1.2))+'/周并提成交'):('0 商机，目标先出 1-2 询盘/周');
+
+  // 主图脚本
+  var imgScript=[];
+  if(advice.img) imgScript.push(advice.img);
+  if(imgBrief) imgScript.push(imgBrief);
+  if(!imgScript.length) imgScript=[
     'Hero主图：产品+核心卖点一句话（白底+痛点钩子）',
-    '成分/USP图：核心成分+功效可视化（图标化，禁性功效宣称）',
-    '认证墙：HALAL/ISO/FSSC/GMP 等证书排布，强化合规',
+    '成分/USP图：核心成分+功效可视化',
+    '认证墙：HALAL/ISO/FSSC/GMP 证书排布',
     '工厂实力：工厂/产线/QC 实拍',
-    '定制感：Your Logo · Your Formula 定制示意',
-    '收尾信任：溶解/冲泡演示+交期+样品政策',
+    '定制感：Your Logo · Your Formula',
+    '收尾信任：演示+交期+样品政策'
   ];
+
+  var detailTxt=advice.detail||'价格前置+定制可视化+信任数据墙+FAQ';
+  var kwTxt=advice.kw||playbook.benchmark||'';
 
   var h='<div class="plan-modal">';
-  h+='<div class="pm-head"><span>🚀</span><b>爆品作战方案</b><span class="pm-title">'+esc(title)+'</span><div class="spacer"></div><span class="muted small">最后更新 · AI预填</span><button class="btn btn-save">保存方案</button><button class="btn btn-close" onclick="this.closest(\'.modal-overlay\').remove()">关闭 ✕</button></div>';
-  // 4 步进度
-  h+='<div class="pm-steps"><span class="step on"><i>1</i>目标</span><span class="step"><i>2</i>战况诊断</span><span class="step"><i>3</i>五大打法</span><span class="step"><i>4</i>Listing落地</span><span class="muted small">一条主线：先定目标 → 看清战况 → 撬五个杠杆 → 落到 listing。改完点右上「保存方案」</span></div>';
+  h+='<div class="pm-head"><span>🚀</span><b>爆品作战方案</b><span class="pm-title">'+esc(title)+'</span><div class="spacer"></div>'+(grade?'<span class="tag '+gcls+'">'+esc(grade)+'</span>':'')+'<button class="btn btn-close" onclick="this.closest(\'.modal-overlay\').remove()">关闭 ✕</button></div>';
   h+='<div class="pm-body">';
-  // 左列
   h+='<div class="pm-left">';
-  // AI 识别诊断
-  var ctr = it? (it.ctr||0) : 0;
-  var opp = (inq||0) + (it? (it.tm||0) : 0);
-  var aiRec = (ctr>=3) ? 'AI 搜索友好（CTR '+pct(ctr)+' 高，主图/标题已被买家点选）' : (ctr>=1.5? 'AI 搜索中规中矩（CTR '+pct(ctr)+'），标题/主图可再贴合采购意图' : 'AI 搜索识别弱（CTR '+pct(ctr)+' 低），标题未覆盖核心品类词或首图卖点弱');
-  var b2bFit = opp>0 ? ('有商机 '+num(opp)+'（询盘'+inq+'/TM'+(it?it.tm:0)+'），B 端买家已在询价，转成交是重点') : ('0 商机，B 端转化未验证——先修详情页价格/MOQ/OEM 能力展示');
-  h+='<div class="pm-box"><h5>🤖 AI 识别诊断（能否被 AI 搜索识别 + B端转化适配）</h5><div class="pm-note"><div><span class="tag '+(ctr>=3?'good':'warn')+'">'+aiRec+'</span></div><div class="mt8"><span class="tag '+(opp>0?'good':'danger')+'">'+b2bFit+'</span></div>'+
-    '<div class="small muted mt8">市场趋势：'+(mtForCat(pid, it)||'该类目近期询盘平稳，重点做差异化而非追风口')+'</div></div></div>';
-  h+='<div class="pm-box"><h5>💬 客户聊天摘要（成交线索）</h5><div class="pm-note">'+(intent? esc(intent) : '团队填真实 L2+ 买家：国家/公司/意向/卡在报价或MOQ或样品哪一步。本品当前询盘 '+(inq||0)+'、TM '+(it?num(it.tm):'0')+'，从这些线索里追。')+'</div></div>';
-  h+='<div class="pm-box"><h5>🎯 目标</h5><div class="pm-note">'+esc(g||'本品当前询盘 '+(inq||0)+'，目标稳到 2+/周')+'</div></div>';
-  h+='<div class="pm-box"><h5>🩺 战况诊断</h5><div class="pm-note">'+(problem? '<b>问题</b>：'+esc(problem):'')+(root? '<br><b>根因</b>：'+esc(root):'')+(evidence? '<br><b>数据</b>：'+esc(evidence):'')+(peer? '<br><b>对标</b>：'+esc(peer):'')+(listing? '<br><b>Listing诊断</b>：'+esc(listing):'')+'</div></div>';
-  h+='<div class="pm-box"><h5>🚀 五大打法杠杆</h5>';
-  levers.forEach(function(L){ h+='<div class="lever"><span class="lv-icon">'+L.icon+'</span><div><b>'+L.name+'</b>：'+L.txt+'</div></div>'; });
+  h+='<div class="pm-box"><h5>🤖 AI 识别诊断</h5><div class="pm-note">'+(funnel.length?funnel.map(function(f){return (f.ok?'✅':'⚠️')+esc(f.txt);}).join('　'):('全店曝光 '+num(imps)+' · 点击 '+num(clk)+' · CTR '+pct(ctr)+' · 商机 '+opp))+'</div></div>';
+  if(good.length) h+='<div class="pm-box"><h5>💪 优势（保持）</h5><div class="pm-note">'+good.slice(0,4).map(function(x){return '• '+esc(x);}).join('<br>')+'</div></div>';
+  h+='<div class="pm-box"><h5>🎯 目标 / 定位</h5><div class="pm-note">'+esc(goalTxt)+'</div></div>';
+  h+='<div class="pm-box"><h5>🩺 战况诊断（短板）</h5><div class="pm-note">'+diagTxt()+'</div></div>';
+  h+='<div class="pm-box"><h5>🚀 五大打法（按优先级执行）</h5>';
+  moves.forEach(function(m,i){ h+='<div class="lever"><span class="lv-icon">'+mvIcons[i%5]+'</span><div><b>'+esc(m)+'</b></div></div>'; });
   h+='</div>';
-  if(dont){ h+='<div class="pm-box"><h5>🚫 不做</h5><div class="pm-note">'+esc(dont)+'</div></div>'; }
+  if(dont) h+='<div class="pm-box"><h5>🚫 不做</h5><div class="pm-note">'+esc(dont)+'</div></div>';
+  if(intent) h+='<div class="pm-box"><h5>💬 成交线索</h5><div class="pm-note">'+esc(intent)+'</div></div>';
   h+='</div>';
-  // 右列
   h+='<div class="pm-right">';
-  h+='<div class="pm-box"><h5>📷 主图/视觉脚本（可直接生成结果图）</h5><ol class="img-script">';
-  imgs.forEach(function(s){ h+='<li>'+esc(s)+'</li>'; });
+  h+='<div class="pm-box"><h5>📷 主图脚本</h5><ol class="img-script">';
+  imgScript.forEach(function(x){ h+='<li>'+esc(x)+'</li>'; });
   h+='</ol></div>';
-  if(titles && titles.length){
+  if(kwTxt) h+='<div class="pm-box"><h5>🔑 关键词 / 对标</h5><div class="pm-note">'+esc(kwTxt)+'</div></div>';
+  if(titles&&titles.length){
     h+='<div class="pm-box"><h5>✍️ 候选标题</h5><ul class="pm-list">';
-    titles.forEach(function(t){ h+='<li><b>'+(t.code?esc(t.code)+' ':'')+'</b>'+esc(t.title||t)+' <span class="muted">'+(t.note?esc(t.note):'')+'</span></li>'; });
+    titles.forEach(function(t){ h+='<li><b>'+(t.code?esc(t.code)+' ':'')+'</b>'+esc(t.title||t)+'</li>'; });
     h+='</ul></div>';
   }
-  h+='<div class="pm-box"><h5>🎯 详情页询盘转化要点</h5><ul class="pm-list">'+
-    '<li>价格前置：Price from $X.XX/unit + MOQ + 交期一目了然</li>'+
-    '<li>定制可视化：logo/配方/口味/包装可定制示意</li>'+
-    '<li>信任数据墙：认证 + 工厂规模 + 配方数 + 年限</li>'+
-    '<li>FAQ 前置解决合规/起订/样品疑虑</li></ul></div>';
-  h+='<div class="pm-box"><h5>📄 详情正文优化（英文文案）</h5><div class="pm-note">合规：只谈 energy / focus / vitality / stamina，删除性健康功效表述。<br>CTA：Start your OEM project — send us your target market, MOQ and customization needs, we quote within 24 hours.</div></div>';
+  h+='<div class="pm-box"><h5>🎯 详情页询盘转化要点</h5><ul class="pm-list"><li>'+esc(detailTxt)+'</li><li>价格前置：Price from $X + MOQ + 交期</li><li>定制可视化：logo/配方/口味/包装</li><li>信任数据墙：认证+工厂规模+配方数+年限</li></ul></div>';
+  h+='<div class="pm-box"><h5>📄 详情正文（英文文案）</h5><div class="pm-note">CTA：Start your OEM project — send us your target market, MOQ and customization needs, we quote within 24 hours.</div></div>';
   h+='</div>';
   h+='</div></div>';
   return h;
