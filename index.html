@@ -23,7 +23,7 @@
 <!-- 顶部深蓝 header -->
 <div class="topbar">
   <span class="logo">国际站运营看板</span>
-  <select class="store-sel" id="storeSel">
+  <select class="store-sel" id="storeSel" onchange="try{localStorage.setItem('alibaba_store', this.value);}catch(e){} location.reload();">
     <option value="lifeworth">莱华仕·运动营养</option>
     <option value="yh">YH·草本补充剂</option>
   </select>
@@ -72,7 +72,7 @@
   <div class="tabpanel" id="panel-admin"></div>
 </div>
 
-<script src="chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="dashboard_data.js"></script>
 <script src="dashboard_data_yh.js"></script>
 <script>
@@ -95,7 +95,7 @@
     s.onload = function(){ if (document.readyState !== 'loading' && typeof boot === 'function') boot(); };
     document.body.appendChild(s);
   }
-  var STORES = { lifeworth: window.V4_DATA_ENCRYPTED, yh: window.V4_DATA_ENCRYPTED_YH };
+  var STORES = window.V4_STORES || { lifeworth: window.V4_DATA_ENCRYPTED, yh: window.V4_DATA_ENCRYPTED_YH };
   var currentStore = (function(){ try{ return localStorage.getItem('alibaba_store') || 'lifeworth'; }catch(e){ return 'lifeworth'; } })();
   function getEnc(){ return STORES[currentStore] || null; }
   if (getEnc()){
