@@ -574,7 +574,7 @@ function renderAd(){
   var ap=D.ad_plans||null;
   var h=weeklyOnlyNote()+'<div class="insight warn">⚠ 关键词级搜索广告（直通车）10 个计划全暂停、本周 0 花费 → 无关键词/产品搜索数据（是「没投」不是接口缺）。全站推产品级数据见下方「产品级全站推 Top」。</div><div class="section-title">| 广告花费拆解 <span class="sub">账户总览 + 计划层逐个判定</span></div>';
   if(!ap || !ap.account){ 
-    h+='<div class="card"><div class="muted">广告计划层数据未接入（需运行广告数据拉取）。</div>'+noteBox('ad')+'</div>'; return h;
+    h+='<div class="card"><div class="muted">广告账户花费/计划层未接入：直通车 10 个计划全暂停（0 花费），无可展示花费/ROI；全站推产品级曝光/点击已在上方榜单展示。真实花费需 P4P 账户接口开放（当前未接入）。</div>'+noteBox('ad')+'</div>'; return h;
   }
   var a=ap.account;
   h+='<div class="card">';
