@@ -1323,9 +1323,10 @@ function renderCompete(){
   var el=document.getElementById('panel-compete');
   var comps=(D.competitor_full&&D.competitor_full.competitors)||(D.v4_scores&&D.v4_scores.competitors)||[];
   var total=(D.competitor_full&&D.competitor_full.total)||comps.length;
-  var h='<div class="section-title">竞品对比 <span class="sub">'+num(total)+' 个真实竞品（5 家供应商），带真实图可跳转+好在哪点评</span></div>';
+  var sup=(D.competitor_full&&D.competitor_full.supplier_count)||5;
+  var h='<div class="section-title">竞品对比 <span class="sub">'+num(total)+' 个真实竞品（'+num(sup)+' 家供应商），带真实图可跳转+好在哪点评</span></div>';
   h+='<div class="card">';
-  h+='<div class="insight info">对标口径：5 家标杆供应商的 Top 商品（按月订单排序），只保留运动营养/维生素/草本补充剂/胶原蛋白品类，已过滤壮阳/减肥/美白/助孕/关节/骨骼/心脏/脑等擦边与非目标品类。每张卡：①竞品好在哪（月订单/询盘/MOQ）②价格/MOQ 差在哪 ③点「跳转」看它的主图/详情打法。</div>';
+  h+='<div class="insight info">对标口径：'+num(sup)+' 家标杆供应商的 Top 商品（按月订单排序），只保留运动营养/维生素/草本补充剂/胶原蛋白品类，已过滤壮阳/减肥/美白/助孕/关节/骨骼/心脏/脑等擦边与非目标品类。每张卡：①竞品好在哪（月订单/询盘/MOQ）②价格/MOQ 差在哪 ③点「跳转」看它的主图/详情打法。</div>';
   if(!comps.length){ h+='<div class="muted">竞品数据未接入。</div>'; }
   else {
     // 类目筛选
@@ -1471,19 +1472,18 @@ function renderPeer(){
   var name2domain={};
   var cd=(D.competitor_detail&&D.competitor_detail.stores)||[];
   cd.forEach(function(s){ name2domain[s.name]=s.domain; });
-  h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>公司</th><th>星</th><th class="num">评分</th><th class="num">评论</th><th class="num">询盘指数7d</th><th class="num">UV指数7d</th><th class="num">订单指数7d</th><th>主营</th></tr></thead><tbody>';
+  h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>公司</th><th>星</th><th class="num">评分</th><th class="num">评论</th><th class="num">询盘指数7d</th><th class="num">UV指数7d</th><th class="num">订单指数</th><th>主营</th></tr></thead><tbody>';
   (pb.peers||[]).forEach(function(x,i){
     var stars=''; for(var s=0;s<Math.round(parseFloat(x.star_level)||0);s++) stars+='★';
     var nameCell = '<span class="store-link" onclick="openStoreDetail(\''+esc(x.store_name)+'\')">'+esc(x.store_name)+'</span>';
     h+='<tr><td>'+(i+1)+'</td><td>'+nameCell+'<div class="pid">'+esc(x.store_id||'')+'</div></td>'+
       '<td>'+stars+'<span class="small muted">'+esc(x.star_level||'')+'</span></td>'+
       '<td class="num">'+esc(x.score||'—')+'</td><td class="num">'+num(x.review_cnt)+'</td>'+
-      '<td class="num">'+num(x.inquiry_7d)+'</td><td class="num">'+num(x.uv_7d)+'</td><td class="num">'+num(x.order_7d)+'</td>'+
+      '<td class="num">'+num(x.inquiry_7d)+'</td><td class="num">'+num(x.uv_7d)+'</td><td class="num">'+num(x.order_7d!=null?x.order_7d:x.order_30d)+'</td>'+
       '<td class="small">'+esc((x.main_products||'').slice(0,60))+'</td></tr>';
   });
   h+='</tbody></table></div>';
-  h+='<div class="muted small">注：询盘/UV/订单为平台指数（近7日合计），非真实成交额；全部 10 家可点查看档案（前 5 家含深度分析）。</div>';
-  h+='<div class="muted small">注：询盘/UV/订单为平台指数（近7日合计），非真实成交额；仅用于同行相对位置参考。</div>';
+  h+='<div class="muted small">注：共 '+pb.peers.length+' 家标杆店；询盘/UV 为平台指数（近7日合计）；订单为平台指数（老数据 7日 / 新库 30日），均非真实成交额，仅用于同行相对位置参考。</div>';
   h+=noteBox('peer')+'</div>';
   el.innerHTML=h;
 }
