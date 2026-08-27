@@ -1565,6 +1565,7 @@ function initGlobalSearch(){
   var tabIds=['period','focus','ai','trend','exec','compete','peer','admin'];
   tabs.forEach(function(t,i){ idx.push({type:'板块', name:t, tab:tabIds[i], section:''}); });
   var sections=[['店铺漏斗','funnel'],['承接效率','bearing'],['客服子账号','staff'],['店铺健康','health'],['广告花费拆解','ad'],['国家地区','country'],['市场机会','market'],['流量渠道','channel'],['买家L1+','buyerl1'],['关键词机会','keyword'],['0效果产品','zeroeffect'],['本期总结','summary'],['商机榜','opp'],['TM商机榜','tm'],['点击率榜','ctr'],['零花费榜','zero'],['高效低耗榜','eff'],['新品追踪','newprod']];
+  window._sectionsIdx=sections;
   sections.forEach(function(s){ idx.push({type:'板块', name:s[0], tab:'period', section:s[1]}); });
   var seen={};
   var catSet={};
@@ -1595,6 +1596,22 @@ function initGlobalSearch(){
     document.getElementById('panel-'+tab).classList.add('on');
     if(tab==='trend') setTimeout(drawTrendChart,50);
     drop.style.display='none'; inp.value='';
+    // 板块：滚动到对应板块标题
+    if(sec){
+      var secName=null;
+      var it2=null;
+      for(var si=0; si<window._sectionsIdx && window._sectionsIdx[si]; si++){ if(window._sectionsIdx[si][1]===sec){ it2=window._sectionsIdx[si]; break; } }
+      if(it2) secName=it2[0];
+      if(secName){
+        setTimeout(function(){
+          var tts=document.querySelectorAll('#panel-'+tab+' .section-title');
+          for(var i=0;i<tts.length;i++){
+            var tx=tts[i].textContent||'';
+            if(tx.indexOf(secName)>=0){ tts[i].scrollIntoView({behavior:'smooth', block:'start'}); break; }
+          }
+        }, 80);
+      }
+    }
     // 产品：打开评分详情
     if(pid && pid!=='') openScore(pid);
     // 关键词：设置 AI 搜索过滤
