@@ -27,6 +27,20 @@ function previewImg(url){
   ov.addEventListener('click', function(){ ov.remove(); });
 }
 
+/* ---------- 产品跳转链接（我的产品 → Alibaba 商品页） ---------- */
+function pUrl(p){
+  if(!p || !p.product_id) return '';
+  var slug=String(p.title||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
+  return 'https://www.alibaba.com/product-detail/'+slug+'_'+p.product_id+'.html';
+}
+function plink(p, maxLen){
+  var full=String((p&&p.title)||'');
+  var t=maxLen? full.slice(0,maxLen) : full;
+  var u=pUrl(p);
+  if(!u) return '<span title="'+esc(full)+'">'+esc(t)+'</span>';
+  return '<a class="plink" href="'+esc(u)+'" target="_blank" rel="noopener" title="'+esc(full)+'">'+esc(t)+'</a>';
+}
+
 /* ---------- AI 评分 ---------- */
 var SCORES = {};
 function loadScores(){ SCORES={}; (D.v4_scores&&D.v4_scores.scores||[]).forEach(function(s){ SCORES[s.product_id]=s; }); }
@@ -429,7 +443,7 @@ function renderListBody(noteKey){
   list.slice(0,50).forEach(function(p,i){
     var s=scoreOf(p.product_id);
     h+='<tr><td>'+(i+1)+'</td>'+
-      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div><div class="pid">'+esc(p.category||'')+' · '+esc(p.product_id)+'</div></div></div></td>'+
+      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+plink(p)+'</div><div class="pid">'+esc(p.category||'')+' · '+esc(p.product_id)+'</div></div></div></td>'+
       '<td class="num">'+num(p.total_imps)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.ad_imps)+'</td><td class="num">'+num(p.ad_clk)+'</td>'+
       '<td>'+gradeTag(s)+'</td>'+
@@ -504,7 +518,7 @@ function renderNewProduct(){
     var d=newProdDate(p);
     var st=newProdStatus(p);
     h+='<tr><td class="num"><input type="checkbox"'+(isTracked(p.product_id)?' checked':'')+' onchange="toggleTrack(\''+p.product_id+'\', this.checked); renderNewProduct();"></td><td>'+(i+1)+'</td>'+
-      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+' · '+esc(p.category||'')+'</div></div></div></td>'+
+      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+plink(p)+'</div><div class="pid">'+esc(p.product_id)+' · '+esc(p.category||'')+'</div></div></div></td>'+
       '<td><input type="date" value="'+esc(d)+'" onchange="setNewDate(\''+p.product_id+'\', this.value)"></td>'+
       '<td>'+gradeTag(s)+'</td>'+
       '<td class="num">'+num(p.total_imps)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
@@ -528,7 +542,7 @@ function openNewManager(){
     var d=newProdDate(p);
     var chk=isTracked(p.product_id)?' checked':'';
     return '<tr><td class="num"><input type="checkbox" data-mpid="'+p.product_id+'"'+chk+' onchange="npSyncSelectAll()"></td>'+
-      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+' · '+(p.first_seen_at||'无日期')+'</div></div></div></td>'+
+      '<td><div class="thumb-cell">'+pimg(p.main_image)+'<div><div class="t">'+plink(p)+'</div><div class="pid">'+esc(p.product_id)+' · '+(p.first_seen_at||'无日期')+'</div></div></div></td>'+
       '<td><input type="date" data-mdate="'+p.product_id+'" value="'+esc(d)+'"></td>'+
       '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+num(p.opp)+'</td></tr>';
   }).join('');
@@ -604,7 +618,7 @@ function renderAd(){
     h+='<div class="card"><h4>产品级全站推 Top '+Math.min(20,adp.length)+' <span class="sub">按点击降序</span></h4>';
     h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th class="num">曝光</th><th class="num">点击</th><th class="num">CTR</th><th class="num">询盘</th><th class="num">TM</th><th class="num">订单</th><th class="num">商机</th><th class="num">商机转化率</th><th class="num">L1+点击占比</th></tr></thead><tbody>';
     adp.slice(0,20).forEach(function(p,i){
-      h+='<tr><td>'+(i+1)+'</td><td class="small"><div class="t">'+esc(p.title)+'</div><div class="pid">'+esc(p.product_id)+'</div></td>'+
+      h+='<tr><td>'+(i+1)+'</td><td class="small"><div class="t">'+plink(p)+'</div><div class="pid">'+esc(p.product_id)+'</div></td>'+
         '<td class="num">'+num(p.imps)+'</td><td class="num">'+num(p.clk)+'</td><td class="num">'+num(p.ctr)+'%</td>'+
         '<td class="num">'+num(p.inquiries)+'</td><td class="num">'+num(p.tm)+'</td><td class="num">'+num(p.orders)+'</td>'+
         '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.opp_rate)+'%</td><td class="num">'+num(p.l1_rate)+'%</td></tr>';
@@ -778,7 +792,7 @@ function renderZeroEffect(){
     h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th class="num">曝光</th><th>层级</th><th>AI评分</th><th>处置建议</th></tr></thead><tbody>';
     waste.slice(0,20).forEach(function(s,i){
       var act = s.cat_type==='maca'||s.cat_type==='detox' ? '合规改名后再救流量' : '首图重做(痛点钩子+认证)+标题补长尾';
-      h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(s.main_image)+'<div class="t">'+esc((s.title||'').slice(0,50))+'</div><div class="pid">'+esc(s.product_id)+'</div></div></td>'+
+      h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(s.main_image)+'<div class="t">'+plink(s,50)+'</div><div class="pid">'+esc(s.product_id)+'</div></div></td>'+
         '<td class="num">'+num(s.imps)+'</td><td>'+esc(s.prod_level||'')+'</td><td>'+gradeTag(s)+'</td>'+
         '<td class="small">'+act+'</td></tr>';
     });
@@ -790,7 +804,7 @@ function renderZeroEffect(){
     h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th>层级</th><th>AI评分</th><th>处置建议</th></tr></thead><tbody>';
     sleep.slice(0,20).forEach(function(s,i){
       var act = s.prod_level==='低质品' ? '低质品+沉睡，建议下架换新' : '补结构化属性+主图6张+视频，进AI搜索池激活';
-      h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(s.main_image)+'<div class="t">'+esc((s.title||'').slice(0,50))+'</div><div class="pid">'+esc(s.product_id)+'</div></div></td>'+
+      h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(s.main_image)+'<div class="t">'+plink(s,50)+'</div><div class="pid">'+esc(s.product_id)+'</div></div></td>'+
         '<td>'+esc(s.prod_level||'')+'</td><td>'+gradeTag(s)+'</td>'+
         '<td class="small">'+act+'</td></tr>';
     });
@@ -867,7 +881,7 @@ function renderFocus(){
   var opp=(D.lists.opp||[]).slice(0,15);
   var zc=(D.lists.zero_cost||[]).slice(0,8);
   var danger=(D.lists.ctr||[]).filter(function(p){return (p.opp||0)===0 && (p.total_clk||0)>=4;}).slice(0,8);
-  var hc=(D.hot_categories||[]).slice(0,6);
+  var hc=(D.hot_categories||[]).slice(0,10);
   var h='<div class="section-title">重点关注 <span class="sub">机会雷达：按「为什么关注 + 下一步动作」分层</span></div>';
   // 顶部机会雷达
   var oppCnt=(D.lists.opp||[]).length, zcCnt=(D.lists.zero_cost||[]).length, dngCnt=(D.lists.ctr||[]).filter(function(p){return (p.opp||0)===0;}).length;
@@ -898,7 +912,7 @@ function renderFocus(){
   h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th>AI评分</th><th class="num">商机</th><th class="num">点击</th><th class="num">CTR</th><th>下一步动作（资深运营口径）</th></tr></thead><tbody>';
   opp.forEach(function(p,i){
     var s=scoreOf(p.product_id);
-    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div></div></td>'+
+    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t">'+plink(p)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
       '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="small">'+(s?conciseAdvice(s):'')+'</td></tr>';
@@ -909,7 +923,7 @@ function renderFocus(){
   h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th>AI评分</th><th class="num">商机</th><th class="num">点击</th><th class="num">CTR</th><th>动作</th></tr></thead><tbody>';
   zc.forEach(function(p,i){
     var s=scoreOf(p.product_id);
-    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div></div></td>'+
+    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t">'+plink(p)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
       '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="small">'+(s?conciseAdvice(s):esc(p.sug))+'</td></tr>';
@@ -920,7 +934,7 @@ function renderFocus(){
   h+='<div class="tbl-scroll"><table><thead><tr><th>#</th><th>产品</th><th>AI评分</th><th class="num">点击</th><th class="num">CTR</th><th>断点建议</th></tr></thead><tbody>';
   danger.forEach(function(p,i){
     var s=scoreOf(p.product_id);
-    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div></div></td>'+
+    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t">'+plink(p)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
       '<td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td>'+
       '<td class="small">'+(s?conciseAdvice(s):esc(p.sug))+'</td></tr>';
@@ -994,7 +1008,7 @@ function renderAITable(){
   var h='';
   list.slice(0,100).forEach(function(p,i){
     var s=scoreOf(p.product_id);
-    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t" title="'+esc(p.title)+'">'+esc(p.title)+'</div><div class="pid">'+esc(p.category||'')+' · '+esc(p.product_id)+'</div></div></td>'+
+    h+='<tr><td>'+(i+1)+'</td><td><div class="thumb-cell">'+pimg(p.main_image)+'<div class="t">'+plink(p)+'</div><div class="pid">'+esc(p.category||'')+' · '+esc(p.product_id)+'</div></div></td>'+
       '<td>'+gradeTag(s)+'</td>'+
       '<td class="num">'+num(p.opp)+'</td><td class="num">'+num(p.total_imps)+'</td><td class="num">'+num(p.total_clk)+'</td><td class="num">'+pct(p.total_ctr)+'</td><td class="num">'+num(p.ad_imps)+'</td><td class="num">'+num(p.ad_clk)+'</td>'+
       '<td>'+tag(p.label,p.label_typ)+'</td>'+
