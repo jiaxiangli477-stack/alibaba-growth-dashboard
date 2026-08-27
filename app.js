@@ -1482,7 +1482,7 @@ function renderPeer(){
   var el=document.getElementById('panel-peer');
   var pb=D.peer_benchmark||null;
   var h='<div class="section-title">🏆 同行标杆总览</div>';
-  h+='<div class="card"><div class="insight">【行业格局】标杆同行由数据参谋「供应商筛选」（30d，按 GMV 降序）实时返回，含主营类目、星等级、国家覆盖与营收表现，详见下方卡片——对标时重点看营收领先者的主营品类与定位，找可复制的赛道与差异化空隙。</div>';
+  h+='<div class="card"><div class="insight">【行业格局】标杆同行由数据参谋「供应商筛选」（30d，按 GMV 降序）实时返回，含星等级、评分、评论、询盘/UV/订单指数与主营类目——对标时重点看营收领先者的主营品类与定位，找可复制的赛道与差异化空隙。点公司名可看该店指数档案并跳转店铺。</div>';
   if(!pb || !(pb.peers||[]).length){
     h+='<div class="card"><div class="muted">标杆同行数据未接入。</div>'+noteBox('peer')+'</div>'; el.innerHTML=h; return h;
   }
@@ -1500,7 +1500,7 @@ function renderPeer(){
       '<td class="small">'+esc((x.main_products||'').slice(0,60))+'</td></tr>';
   });
   h+='</tbody></table></div>';
-  h+='<div class="muted small">注：共 '+pb.peers.length+' 家标杆店；询盘/UV 为平台指数（近7日合计）；订单为平台指数（老数据 7日 / 新库 30日），均非真实成交额，仅用于同行相对位置参考。</div>';
+  h+='<div class="muted small">注：共 '+pb.peers.length+' 家标杆店，按 30 天实收 GMV 降序排列；询盘/UV/订单均为平台指数（近7日合计），非真实成交额，仅用于同行相对位置参考。</div>';
   h+=noteBox('peer')+'</div>';
   el.innerHTML=h;
 }
