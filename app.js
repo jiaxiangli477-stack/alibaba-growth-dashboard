@@ -673,10 +673,13 @@ function renderMarket(){
   if(hp.length){
     h+='<div class="grid3">';
     hp.slice(0,18).forEach(function(p){
-      h+='<div class="prod-card"><div class="thumb">'+(p.image? '<img src="'+esc(p.image)+'" loading="lazy" onerror="this.style.display=\'none\'">':'<div class="noimg">无图</div>')+'</div>'+
+      var url=p.url||(p.product_id?('https://www.alibaba.com/product-detail/_'+p.product_id+'.html'):'');
+      var clickAttr=url?(' class="prod-card clickable" data-url="'+esc(url)+'" onclick="window.open(this.getAttribute(\'data-url\'),\'_blank\')"'):' class="prod-card"';
+      h+='<div'+clickAttr+'><div class="thumb">'+(p.image? '<img src="'+esc(p.image)+'" loading="lazy" onerror="this.style.display=\'none\'">':'<div class="noimg">无图</div>')+'</div>'+
         '<div class="t small">'+esc((p.title||'').slice(0,55))+'</div>'+
         '<div class="muted small">'+esc(p.category||'')+'</div>'+
-        (p.reason?'<div class="reason small">'+esc(p.reason)+'</div>':'')+'</div>';
+        (p.reason?'<div class="reason small">'+esc(p.reason)+'</div>':'')+
+        (url?'<div class="jump small">🔗 查看商品 ↗</div>':'')+'</div>';
     });
     h+='</div>';
   }
