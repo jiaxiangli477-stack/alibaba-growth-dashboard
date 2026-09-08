@@ -286,8 +286,8 @@ function renderPeriod(){
   // 榜单
   // 榜单（周口径，月度时提示）
   h += weeklyOnlyNote();
-  h += renderList('四、⭐ 上升趋势·零花费榜','有商机 + 点击好 + 没给广告预算 → 优先接预算','zero_cost','zero');
-  h += renderList('五、💰 高效低耗榜','零花费但有商机 → 单商机成本最低的一批','high_eff_low_cost','eff');
+  h += renderList('四、⭐ 上升趋势·零花费榜','没投广告但自然流量已出商机/高点击 → 零成本验证过，优先接广告预算','zero_cost','zero');
+  h += renderList('五、💰 高效低耗榜','已投广告(有广告点击)且本周出商机 → 广告钱花得值、单商机成本低，加预算放大','high_eff_low_cost','eff');
   h += renderList('六、商机榜 Top50','询盘+TM 合并的商机榜，按商机量排序','opp','opp');
   h += renderList('七、💬 TM商机榜','纯 TM 咨询（无询盘）也是商机，主动跟进转报价成交','tm','tm');
   h += renderList('八、点击率榜 Top20','搜索点击≥4过滤噪音；高CTR+0商机=主图勾人但详情没转化','ctr','ctr');
