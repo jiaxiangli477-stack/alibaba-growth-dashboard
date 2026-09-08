@@ -406,7 +406,7 @@ function renderHealth(){
   (hh.levels||[]).forEach(function(l){
     h+='<div class="kpi"><div class="k-label">'+esc(l.label)+'</div><div class="k-val">'+num(l.count)+'</div></div>';
   });
-  h+='</div><div class="mt8 small muted">有询盘产品 '+num(hh.inquiry_products)+' · 零询盘产品 '+num(hh.zero_inquiry)+'（'+pct(hh.zero_inquiry/hh.valid_cnt)+'）</div></div>';
+  h+='</div><div class="mt8 small muted">有询盘产品 '+num(hh.inquiry_products)+' · 零询盘产品 '+num(hh.zero_inquiry)+'（'+pct((hh.valid_cnt?hh.zero_inquiry*100/hh.valid_cnt:0))+'）</div></div>';
   h+='</div>';
   h+=noteBox('health');
   h+='</div>';
