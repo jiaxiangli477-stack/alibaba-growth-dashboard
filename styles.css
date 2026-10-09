@@ -197,6 +197,12 @@ td .pid{color:var(--muted);font-size:10px}
 
 /* ===== 老板看板（视角切换）===== */
 .viewswitch{background:var(--navy3);display:flex;align-items:center;gap:8px;padding:6px 16px}
+.viewswitch .vs-spacer{flex:1}
+.viewswitch .vs-export{display:flex;align-items:center;gap:8px;color:#fff;font-size:12px}
+.viewswitch .vs-select{background:#ffffff22;color:#fff;border:0;border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer}
+.viewswitch .vs-select option{color:#1f2733;background:#fff}
+.viewswitch .vs-export-btn{background:var(--accent);color:#1f2733;border:0;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.viewswitch .vs-export-btn:hover{filter:brightness(1.06)}
 .viewswitch .vs-btn{border:0;background:#ffffff22;color:#fff;border-radius:6px;padding:6px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
 .viewswitch .vs-btn:hover{background:#ffffff3a}
 .viewswitch .vs-btn.on{background:var(--accent);color:#1f2733;font-weight:800}
@@ -266,6 +272,12 @@ body.view-boss #panel-boss{display:block !important}
 .bm-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .bm-row label{min-width:132px;font-size:12px;font-weight:700;color:var(--ink)}
 .bm-row input{border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12px;width:180px}
+.bm-row-block{grid-column:1 / -1;flex-wrap:wrap}
+.bm-textarea{flex:1;min-width:220px;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12px;resize:vertical;font-family:inherit;line-height:1.4}
+.bm-textarea:focus{outline:none;border-color:var(--blue)}
+.boss-jump{cursor:pointer;transition:box-shadow .15s,transform .1s}
+.boss-jump:hover{box-shadow:0 0 0 2px var(--accent);transform:translateY(-1px)}
+.np-id{color:var(--sub);font-family:monospace;font-size:11px}
 .bm-row input:focus{outline:none;border-color:var(--blue);background:#fff}
 .bm-ph{color:var(--muted);font-size:11px}
 .bm-tip{margin-top:4px;font-size:12px;color:var(--sub);background:var(--note-bg);border-radius:6px;padding:8px 10px;line-height:1.6}
