@@ -254,6 +254,12 @@ body.view-boss #panel-boss{display:block !important}
 /* 爆品展开按钮 */
 .boss-collapse-btn{display:inline-block;margin:2px 0 0;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:6px 14px;background:#f7f9fb;transition:background .15s}
 .boss-collapse-btn:hover{background:var(--info-bg)}
+.boss-jump{cursor:pointer;transition:background .15s}
+.boss-jump:hover{background:var(--info-bg)}
+.boss-exp{cursor:pointer;color:var(--blue);text-decoration:underline dotted}
+.boss-exp::after{content:' ▾';color:var(--sub);font-size:10px}
+.boss-exp[data-open="1"]::after{content:' ▸'}
+.boss-exp-detail{margin-top:8px;padding:9px 12px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;font-size:12px;line-height:1.7;word-break:break-word}
 /* 新品点选：可浏览产品池(带图)，默认展开 */
 .np-browse-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--ink)}
 .np-filter{width:240px}

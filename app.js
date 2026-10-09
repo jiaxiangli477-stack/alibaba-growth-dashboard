@@ -1601,6 +1601,24 @@ function bossPeriodLabel(){
   return _sm ? _sm.month_label : (_sw ? (_sw.week_start+' ~ '+_sw.week_end) : ((D.meta||{}).week_label||''));
 }
 function renderBossIfActive(){ if(document.body && document.body.classList.contains('view-boss')) renderBoss(); }
+/* 平台分级产品区（爆品/优品/潜力优品 通用）：各自可折叠表格 + 供首栏卡跳转的 id */
+function productLevelSection(emoji, title, count, products, secId, key){
+  var n=(products||[]).length;
+  var h='<div class="boss-sec" id="'+secId+'"><h3>'+emoji+' '+title+' <span class="flabel">'+n+' 个 · 平台分级 · 展开看真实产品链接</span></h3>';
+  h+='<button id="bossLvlToggle_'+key+'" class="boss-collapse-btn" type="button" data-label="'+title+'" data-open="0">▸ 展开看'+title+'链接（'+n+' 个）</button>';
+  h+='<div id="bossLvlBody_'+key+'" style="display:none;margin-top:10px">';
+  if(n){
+    h+='<table class="boss-table"><thead><tr><th>#</th><th>产品(链接)</th><th>分级</th><th>曝光</th><th>点击</th><th>询盘</th><th>TM</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>';
+    (products||[]).forEach(function(p,i){
+      h+='<tr><td>'+(i+1)+'</td><td class="prod-cell"><a href="'+(p.detail_url||'#')+'" target="_blank">'+(p.main_image?'<img class="prod-thumb" src="'+esc(p.main_image)+'" alt=""> ':'')+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.tm)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>';
+    });
+    h+='</tbody></table>';
+  } else {
+    h+='<div class="insight" style="margin-top:10px">本周无 '+title+' 产品。</div>';
+  }
+  h+='</div></div>';
+  return h;
+}
 function renderBoss(){
   var el=document.getElementById('panel-boss'); if(!el) return;
   var B=D.boss;
@@ -1626,11 +1644,17 @@ function renderBoss(){
   h+=_kpi('优质获客数量', _n(qc), '手动','manual','运营填写（其中优质客户）');
   h+=_kpi('获客成本', _m(cac), (m.cac!=null&&m.cac!=='')?'手动':'推算', (m.cac!=null&&m.cac!=='')?'manual':'derived', acq>0?'总花费 ÷ 获客数量':'填获客数量后自动算');
   h+=_kpi('广告平均转化成本', _m(adConv), (adConv!=null&&adConv>0)?'自动':'-','auto','单商机成本(全站推CPL)');
-  h+=_kpi('样品单', _n(sample), '手动','manual', m.sample_products ? ('产品: '+esc(m.sample_products)).slice(0,80) : '运营填写（可填具体产品）');
-  h+=_kpi('订单(成交)', _n(k.orders), '自动','auto', (m.order_products?('产品: '+esc(m.order_products)+' · '):'')+'GMV '+_m(k.gmv));
-  h+=_kpi('优爆品数量', _n(B.hot_count), '自动','auto','优品 '+_n(B.premium_count)+' · 潜力优品 '+_n(B.potential_count));
+  var sampProd=m.sample_products||'', ordProd=m.order_products||'';
+  h+='<div class="kpi manual"><span class="tag manual">手动</span><div class="lab">样品单</div><div class="val">'+_n(sample)+'</div><div class="sub">'+(sampProd?'<a class="boss-exp" data-boss-exp="sample">样品产品 '+esc(sampProd.length>14?sampProd.slice(0,14)+'…':sampProd)+'</a>':'运营填写（可填具体产品）')+'</div></div>';
+  h+='<div class="kpi auto"><span class="tag auto">自动</span><div class="lab">订单(成交)</div><div class="val">'+_n(k.orders)+'</div><div class="sub">GMV '+_m(k.gmv)+(ordProd?' · <a class="boss-exp" data-boss-exp="order">订单产品 '+esc(ordProd.length>14?ordProd.slice(0,14)+'…':ordProd)+'</a>':'')+'</div></div>';
+  h+='<div class="kpi auto boss-jump" data-jump="bossSec_hot" title="点击查看爆品"><span class="tag auto">自动</span><div class="lab">爆品数量</div><div class="val">'+_n(B.hot_count)+'</div><div class="sub">▾ 点击查看爆品</div></div>';
+  h+='<div class="kpi auto boss-jump" data-jump="bossSec_premium" title="点击查看优品"><span class="tag auto">自动</span><div class="lab">优品数量</div><div class="val">'+_n(B.premium_count)+'</div><div class="sub">▾ 点击查看优品</div></div>';
+  h+='<div class="kpi auto boss-jump" data-jump="bossSec_potential" title="点击查看潜力优品"><span class="tag auto">自动</span><div class="lab">潜力优品数量</div><div class="val">'+_n(B.potential_count)+'</div><div class="sub">▾ 点击查看潜力优品</div></div>';
   h+='<div class="kpi manual boss-jump" data-jump="bossNewSec" title="点击查看具体新品"><span class="tag manual">手动</span><div class="lab">新品数量</div><div class="val">'+_n(m.new_count)+'</div><div class="sub">▾ 点击查看具体新品</div></div>';
-  h+='</div></div>';
+  h+='</div>';
+  h+='<div class="boss-exp-detail" id="bossExp_order" style="display:none"><b>订单产品：</b>'+(ordProd?esc(ordProd):'<span class="muted">（未填写）</span>')+'</div>';
+  h+='<div class="boss-exp-detail" id="bossExp_sample" style="display:none"><b>样品单产品：</b>'+(sampProd?esc(sampProd):'<span class="muted">（未填写）</span>')+'</div>';
+  h+='</div>';
 
   h+='<div class="boss-sec"><h3>📈 店铺漏斗 <span class="flabel">'+esc(bossPeriodLabel())+' · 每项含 同行优秀/平均 + 较比上周</span></h3>';
   h+=funnelCardsHtml();
@@ -1640,18 +1664,9 @@ function renderBoss(){
   h+=bearingCardsHtml();
   h+='</div>';
 
-  var hotN=(B.hot_products||[]).length;
-  h+='<div class="boss-sec" id="bossHotSec"><h3>🔥 爆品 <span class="flabel">平台分级 · 展开看真实产品链接</span></h3><div class="kpi-grid" style="margin-bottom:12px">';
-  h+=_kpi('爆品数量', _n(B.hot_count),'平台分级','auto','prod_level=爆品');
-  h+=_kpi('优品数量', _n(B.premium_count),'平台分级','auto','prod_level=优品');
-  h+=_kpi('潜力优品', _n(B.potential_count),'平台分级','auto','prod_level=潜力优品');
-  h+='</div>';
-  h+='<button id="bossHotToggle" class="boss-collapse-btn" type="button">▸ 展开看爆品链接（'+hotN+' 个）</button>';
-  h+='<div id="bossHotBody" style="display:none;margin-top:10px"><table class="boss-table"><thead><tr><th>#</th><th>产品(链接)</th><th>分级</th><th>曝光</th><th>点击</th><th>询盘</th><th>TM</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>';
-  (B.hot_products||[]).forEach(function(p,i){
-    h+='<tr><td>'+(i+1)+'</td><td class="prod-cell"><a href="'+(p.detail_url||'#')+'" target="_blank">'+(p.main_image?'<img class="prod-thumb" src="'+esc(p.main_image)+'" alt=""> ':'')+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.tm)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>';
-  });
-  h+='</tbody></table></div></div>';
+  h+=productLevelSection('🔥','爆品', B.hot_count, B.hot_products, 'bossSec_hot','hot');
+  h+=productLevelSection('⭐','优品', B.premium_count, B.premium_products, 'bossSec_premium','premium');
+  h+=productLevelSection('🌱','潜力优品', B.potential_count, B.potential_products, 'bossSec_potential','potential');
 
   h+='<div class="boss-sec" id="bossNewSec"><h3>🆕 新品 <span class="flabel">下方从带图产品池点选 · 新品数量自己填写</span></h3><div class="kpi-grid" style="margin-bottom:12px">';
   h+=_kpi('新品数量', _n(m.new_count),'手动','manual','运营填写（本周/本月上新款数）');
@@ -1708,15 +1723,26 @@ function initBossInteractions(){
       if(t){ t.scrollIntoView({behavior:'smooth', block:'start'}); }
     });
   });
-  // 爆品展开/收起
-  var hotToggle=document.getElementById('bossHotToggle');
-  if(hotToggle){ hotToggle.addEventListener('click', function(){
-    var body=document.getElementById('bossHotBody'); if(!body) return;
-    var open = body.style.display!=='none';
-    body.style.display = open?'none':'block';
-    var n=(D.boss.hot_products||[]).length;
-    hotToggle.textContent = open ? ('▸ 展开看爆品链接（'+n+' 个）') : '▾ 收起爆品链接';
-  }); }
+  // 爆品/优品/潜力优品 展开收起
+  ['hot','premium','potential'].forEach(function(kk){
+    var tg=document.getElementById('bossLvlToggle_'+kk); if(!tg) return;
+    tg.addEventListener('click', function(){
+      var body=document.getElementById('bossLvlBody_'+kk); if(!body) return;
+      var open = body.style.display!=='none';
+      body.style.display = open?'none':'block';
+      tg.setAttribute('data-open', open?'0':'1');
+      var label=tg.getAttribute('data-label');
+      tg.textContent = open ? ('▸ 展开看'+label+'链接') : '▾ 收起'+label+'链接';
+    });
+  });
+  // 订单/样品单 产品名 展开/收起
+  document.querySelectorAll('#panel-boss .boss-exp').forEach(function(a){
+    a.addEventListener('click', function(e){ e.preventDefault();
+      var d=document.getElementById('bossExp_'+a.getAttribute('data-boss-exp')); if(!d) return;
+      var open=d.style.display!=='none'; d.style.display=open?'none':'block';
+      a.setAttribute('data-open', open?'0':'1');
+    });
+  });
   // 新品产品池展开/收起
   var newToggle=document.getElementById('bossNewPoolToggle');
   if(newToggle){ newToggle.addEventListener('click', function(){
@@ -1793,7 +1819,9 @@ function exportView(view){
     R.push(_csvLine(['广告平均转化成本(CPL)', sp.ad_cpl==null?'':sp.ad_cpl, '自动', '']));
     R.push(_csvLine(['样品单', m.sample_orders||0, '手动', m.sample_products||'']));
     R.push(_csvLine(['订单(成交)', k.orders||0, '自动', (m.order_products?(m.order_products+'  '):'')+'GMV $'+(k.gmv==null?'':k.gmv)]));
-    R.push(_csvLine(['优爆品数量(爆品)', B.hot_count||0, '自动', '优品'+(B.premium_count||0)+' 潜力优品'+(B.potential_count||0)]));
+    R.push(_csvLine(['爆品数量', B.hot_count||0, '自动', '']));
+    R.push(_csvLine(['优品数量', B.premium_count||0, '自动', '']));
+    R.push(_csvLine(['潜力优品数量', B.potential_count||0, '自动', '']));
     R.push(_csvLine(['新品数量', m.new_count||0, '手动', '']));
     R.push(_csvLine([]));
   }
@@ -1809,6 +1837,14 @@ function exportView(view){
     R.push(_csvLine(['【爆品】']));
     R.push(_csvLine(['排名','产品','分级','曝光','点击','询盘','TM','订单','GMV($)','链接']));
     (B.hot_products||[]).forEach(function(p,i){ R.push(_csvLine([i+1, p.title, p.level, p.imps, p.clicks, p.inquiries, p.tm, p.orders, p.gmv, p.detail_url||''])); });
+    R.push(_csvLine([]));
+    R.push(_csvLine(['【优品】']));
+    R.push(_csvLine(['排名','产品','分级','曝光','点击','询盘','TM','订单','GMV($)','链接']));
+    (B.premium_products||[]).forEach(function(p,i){ R.push(_csvLine([i+1, p.title, p.level, p.imps, p.clicks, p.inquiries, p.tm, p.orders, p.gmv, p.detail_url||''])); });
+    R.push(_csvLine([]));
+    R.push(_csvLine(['【潜力优品】']));
+    R.push(_csvLine(['排名','产品','分级','曝光','点击','询盘','TM','订单','GMV($)','链接']));
+    (B.potential_products||[]).forEach(function(p,i){ R.push(_csvLine([i+1, p.title, p.level, p.imps, p.clicks, p.inquiries, p.tm, p.orders, p.gmv, p.detail_url||''])); });
     R.push(_csvLine([]));
     R.push(_csvLine(['【已选新品】']));
     R.push(_csvLine(['产品','ID','分级','曝光','点击','商机','订单','GMV($)','链接']));
