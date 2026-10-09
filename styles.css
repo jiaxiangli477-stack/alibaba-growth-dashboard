@@ -235,7 +235,7 @@ body.view-boss #panel-boss{display:block !important}
 .boss-table .prod-cell a{display:inline-flex;align-items:center;gap:8px}
 .prod-thumb{width:40px;height:40px;object-fit:cover;border-radius:5px;border:1px solid var(--line);flex:0 0 auto;background:#eef1f4}
 .boss-sec h3 .flabel{font-size:12px;font-weight:500;color:var(--sub);margin-left:8px}
-.newpick-item .np-thumb{width:28px;height:28px;object-fit:cover;border-radius:4px;border:1px solid var(--line);vertical-align:middle;margin-right:8px;background:#eef1f4}
+.newpick-item .np-thumb{width:30px;height:30px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex:0 0 auto;background:#eef1f4}
 
 /* 产品分级 */
 .lvl{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap}
@@ -245,13 +245,21 @@ body.view-boss #panel-boss{display:block !important}
 .lvl-普通品{background:#f0f2f5;color:var(--sub)}
 .lvl-低质品{background:#f0f2f5;color:var(--muted)}
 
-/* 新品选择器 */
-.newpick{display:none;border:1px solid var(--line);border-radius:8px;max-height:280px;overflow:auto;background:var(--card)}
-.newpick-item{padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f2f5}
+/* 爆品展开按钮 */
+.boss-collapse-btn{display:inline-block;margin:2px 0 0;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:6px 14px;background:#f7f9fb;transition:background .15s}
+.boss-collapse-btn:hover{background:var(--info-bg)}
+/* 新品点选：可浏览产品池(带图)，默认展开 */
+.np-browse-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--ink)}
+.np-filter{width:240px}
+.newpick{display:none;border:1px solid var(--line);border-radius:8px;max-height:440px;overflow:auto;background:var(--card)}
+.newpick.newpick-open{display:block}
+.newpick-item{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f2f5}
 .newpick-item:hover{background:var(--info-bg)}
 .newpick-item.sel{background:var(--good-bg)}
-.newpick-item.sel::after{content:'✓ 已选';float:right;color:var(--green);font-weight:700}
-.np-meta{color:var(--muted);font-size:11px}
+.newpick-item.sel::after{content:'✓ 已选';color:var(--green);font-weight:700;margin-left:auto;white-space:nowrap}
+.newpick-item .np-title{flex:1;line-height:1.3}
+.np-meta{color:var(--muted);font-size:11px;white-space:nowrap}
+.np-empty{padding:14px;color:var(--muted);font-size:12px}
 
 /* 运营录入区 */
 .boss-manual{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
