@@ -1543,6 +1543,138 @@ function populatePeriodSel(){
     ws.onchange=function(){ SELECTED_WEEK=parseInt(this.value,10); updateDateLabel(); renderPeriod(); };
   }
 }
+/* ===================== 老板看板 ===================== */
+function bossKey(){ return 'gos_boss_manual_' + (window.V4_STORE || 'store'); }
+function getBossManual(){
+  var b = (D.boss && D.boss.manual) || {};
+  var m = { quality_customers: b.quality_customers||0, cac: (b.cac!=null?b.cac:null),
+            sample_orders: b.sample_orders||0, other_spend: b.other_spend||0,
+            ad_spend_override: (b.ad_spend_override!=null?b.ad_spend_override:null),
+            new_selection: b.new_selection||[] };
+  try{ var s=localStorage.getItem(bossKey()); if(s){ var o=JSON.parse(s); for(var k in o){ if(k in m) m[k]=o[k]; } } }catch(e){}
+  return m;
+}
+function saveBossManual(m){ try{ localStorage.setItem(bossKey(), JSON.stringify(m)); }catch(e){} }
+function _n(x){ return (x==null)?'-':Number(x).toLocaleString(); }
+function _m(x){ return (x==null)?'-':'¥'+Number(x).toLocaleString(undefined,{maximumFractionDigits:2}); }
+function _pct(x){ return (x==null)?'-':(Math.round(x*100)+'%'); }
+function _kpi(lab,val,tag,cls,sub){ return '<div class="kpi '+(cls||'')+'"><span class="tag '+(cls||'')+'">'+(tag||'')+'</span><div class="lab">'+lab+'</div><div class="val">'+val+'</div><div class="sub">'+(sub||'')+'</div></div>'; }
+function renderNewSelected(m){
+  var pool={}; (D.boss.product_pool||[]).forEach(function(p){ pool[p.product_id]=p; });
+  var rows=m.new_selection.map(function(id){ return pool[id]; }).filter(Boolean);
+  if(!rows.length) return '<div class="insight" style="margin-bottom:8px">尚未选择新品。用下方搜索框从产品池（按点击 Top200）里点选。</div>';
+  var h='<table class="boss-table"><thead><tr><th>产品(点击看链接)</th><th>分级</th><th>曝光</th><th>点击</th><th>商机</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>';
+  rows.forEach(function(p){ h+='<tr><td><a href="'+(p.detail_url||'#')+'" target="_blank">'+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>'; });
+  return h+'</tbody></table>';
+}
+function renderBoss(){
+  var el=document.getElementById('panel-boss'); if(!el) return;
+  var B=D.boss;
+  if(!B){ el.innerHTML='<div class="insight warn">该店暂无老板看板数据。请在数据管线上重跑 <code>v4_judge.py</code> 生成 boss 板块。</div>'; return; }
+  var k=B.kpi, sp=B.spend||{}, m=getBossManual();
+  var adSpend = (m.ad_spend_override!=null && m.ad_spend_override!=='') ? Number(m.ad_spend_override) : (sp.ad_spend||0);
+  var otherSpend = Number(m.other_spend||0);
+  var totalSpend = (adSpend||0) + otherSpend;
+  var qc = Number(m.quality_customers||0);
+  var cac = (m.cac!=null && m.cac!=='') ? Number(m.cac) : (qc>0 ? totalSpend/qc : null);
+  var sample = Number(m.sample_orders||0);
+  var adConv = sp.ad_cpl||null;
+
+  var h='';
+  h+='<div class="boss-head"><h2>👔 老板看板 · 经营总览</h2><div class="sub">周 '+B.week_label+'　｜　<span style="color:#4ade80">绿=自动</span> · <span style="color:#fbbf24">黄=运营手动</span> · <span style="color:#60a5fa">蓝=自动推算</span></div></div>';
+
+  h+='<div class="boss-sec"><h3>💰 花费与获客</h3><div class="kpi-grid">';
+  h+=_kpi('广告花费', _m(adSpend), sp.ad_spend_auto?'自动·全站推':'手动', sp.ad_spend_auto?'auto':'manual', 'CPC '+_n(sp.ad_cpc)+' · 点击 '+_n(sp.ad_clicks));
+  h+=_kpi('店铺其他花费', _m(otherSpend), '手动','manual','年费/问鼎/顶展/品牌广告等');
+  h+=_kpi('店铺总花费', _m(totalSpend), '推算','derived','广告花费 + 其他花费');
+  h+=_kpi('优质客户数量', _n(qc), '手动','manual','运营填写');
+  h+=_kpi('获客成本', _m(cac), (m.cac!=null&&m.cac!=='')?'手动':'推算', (m.cac!=null&&m.cac!=='')?'manual':'derived', qc>0?'总花费 ÷ 优质客户':'填优质客户数后自动算');
+  h+=_kpi('广告平均转化成本', _m(adConv), (adConv!=null&&adConv>0)?'自动':'-','auto','单商机成本(全站推CPL)');
+  h+=_kpi('样品单', _n(sample), '手动','manual','运营填写');
+  h+=_kpi('订单(成交)', _n(k.orders), '自动','auto','GMV '+_m(k.gmv));
+  h+='</div></div>';
+
+  h+='<div class="boss-sec"><h3>📈 流量 · 接待</h3><div class="kpi-grid">';
+  h+=_kpi('总曝光', _n(k.total_imps),'自动','auto','访客 '+_n(k.uv_cnt));
+  h+=_kpi('总点击', _n(k.total_clk),'自动','auto','搜索'+_n(k.se_clk)+' + 推广'+_n(k.camp_clk));
+  h+=_kpi('询盘', _n(k.inquiries),'自动','auto','');
+  h+=_kpi('TM询盘', _n(k.tm_inquiries),'自动','auto','Alibaba TradeManager');
+  h+=_kpi('回复率(30d)', _pct(k.reply_rate),'自动','auto','');
+  h+=_kpi('5分钟首响率', _pct(k.reply_5min),'自动','auto','');
+  h+=_kpi('平均回复时长', (k.avg_reply_time==null?'-':k.avg_reply_time+'h'),'自动','auto','');
+  h+='</div></div>';
+
+  h+='<div class="boss-sec"><h3>🔥 爆品（点产品名看链接）</h3><div class="kpi-grid" style="margin-bottom:12px">';
+  h+=_kpi('爆品数量', _n(B.hot_count),'平台分级','auto','prod_level=爆品');
+  h+=_kpi('优品数量', _n(B.premium_count),'平台分级','auto','prod_level=优品');
+  h+=_kpi('潜力优品', _n(B.potential_count),'平台分级','auto','prod_level=潜力优品');
+  h+='</div>';
+  h+='<table class="boss-table"><thead><tr><th>#</th><th>产品(链接)</th><th>分级</th><th>曝光</th><th>点击</th><th>询盘</th><th>TM</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>';
+  (B.hot_products||[]).forEach(function(p,i){
+    h+='<tr><td>'+(i+1)+'</td><td><a href="'+(p.detail_url||'#')+'" target="_blank">'+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.tm)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+
+  h+='<div class="boss-sec"><h3>🆕 新品（运营手动选择）· 共 <b id="bossNewCount">'+m.new_selection.length+'</b> 个</h3>';
+  h+=renderNewSelected(m);
+  h+='<div style="margin-top:12px"><input id="bossNewSearch" class="manual-input" style="width:360px" placeholder="🔍 搜索产品池(点击Top200)添加/取消新品…"><div id="bossNewPick" class="newpick" style="margin-top:8px"></div></div>';
+  h+='</div>';
+
+  h+='<div class="boss-sec"><h3>✍️ 运营录入区（本浏览器即时生效）</h3><div class="boss-manual">';
+  h+='<div class="bm-row"><label>优质客户数量</label><input data-bm="qc" type="number" value="'+esc(String(m.quality_customers))+'"><span class="bm-ph">本月/本周成交的优质客户数</span></div>';
+  h+='<div class="bm-row"><label>获客成本 (¥)</label><input data-bm="cac" type="text" value="'+esc(String(m.cac==null?'':m.cac))+'"><span class="bm-ph">留空=自动用 总花费÷优质客户</span></div>';
+  h+='<div class="bm-row"><label>样品单数量</label><input data-bm="sample" type="number" value="'+esc(String(m.sample_orders))+'"><span class="bm-ph">运营填写</span></div>';
+  h+='<div class="bm-row"><label>店铺其他花费 (¥)</label><input data-bm="other" type="text" value="'+esc(String(m.other_spend))+'"><span class="bm-ph">年费/问鼎/顶展/品牌广告等</span></div>';
+  h+='<div class="bm-row"><label>广告花费覆盖 (¥)</label><input data-bm="adov" type="text" value="'+esc(String(m.ad_spend_override==null?'':m.ad_spend_override))+'"><span class="bm-ph">留空=用自动值 '+_m(sp.ad_spend)+'</span></div>';
+  h+='<div class="bm-tip">💡 想让老板在别的设备也看到这些数字：把这些值告诉我，我写进看板数据并重新部署（本浏览器 localStorage 仅当前设备可见）。</div>';
+  h+='</div></div>';
+
+  el.innerHTML=h;
+  initBossInteractions();
+}
+function initBossInteractions(){
+  document.querySelectorAll('#panel-boss [data-bm]').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var m=getBossManual(), id=this.getAttribute('data-bm'), raw=this.value;
+      if(id==='qc') m.quality_customers = (raw==='')?0:Number(raw);
+      else if(id==='sample') m.sample_orders = (raw==='')?0:Number(raw);
+      else if(id==='other') m.other_spend = (raw==='')?0:Number(raw);
+      else if(id==='cac') m.cac = (raw==='')?null:Number(raw);
+      else if(id==='adov') m.ad_spend_override = (raw==='')?null:Number(raw);
+      saveBossManual(m); renderBoss();
+    });
+  });
+  var sInp=document.getElementById('bossNewSearch'), pick=document.getElementById('bossNewPick');
+  if(sInp && pick){
+    sInp.addEventListener('input', function(){
+      var q=(sInp.value||'').trim().toLowerCase(), pool=D.boss.product_pool||[], m=getBossManual();
+      var list=pool.filter(function(p){ return !q || (p.title||'').toLowerCase().indexOf(q)>=0; }).slice(0,30);
+      pick.style.display=list.length?'block':'none';
+      pick.innerHTML=list.map(function(p){ var sel=m.new_selection.indexOf(p.product_id)>=0;
+        return '<div class="newpick-item'+(sel?' sel':'')+'" data-pid="'+p.product_id+'">'+esc(p.title)+' <span class="np-meta">· 点击'+_n(p.clicks)+' · '+(p.level||'')+'</span></div>'; }).join('');
+    });
+    pick.addEventListener('click', function(e){
+      var it=e.target.closest('.newpick-item'); if(!it) return;
+      var pid=it.getAttribute('data-pid'), m=getBossManual(), i=m.new_selection.indexOf(pid);
+      if(i>=0) m.new_selection.splice(i,1); else m.new_selection.push(pid);
+      saveBossManual(m); renderBoss();
+    });
+  }
+}
+function setView(v){
+  try{ localStorage.setItem('gos_view', v); }catch(e){}
+  if(v==='boss') document.body.classList.add('view-boss'); else document.body.classList.remove('view-boss');
+  document.querySelectorAll('#viewSwitch .vs-btn').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-view')===v); });
+  if(v==='boss') renderBoss();
+}
+function initBossView(){
+  var sw=document.getElementById('viewSwitch'); if(!sw) return;
+  sw.addEventListener('click', function(e){ var b=e.target.closest('.vs-btn'); if(!b) return; setView(b.getAttribute('data-view')); });
+  var saved='ops'; try{ saved=localStorage.getItem('gos_view')||'ops'; }catch(e){}
+  setView(saved);
+}
+/* ===================== /老板看板 ===================== */
+
 function boot(){
   loadScores();
   updateDateLabel();
@@ -1571,6 +1703,8 @@ function boot(){
   document.getElementById('segMonth').onclick=function(){ PERIOD='month'; this.classList.add('on'); document.getElementById('segWeek').classList.remove('on'); updateDateLabel(); populatePeriodSel(); renderPeriod(); };
   // 全局搜索
   initGlobalSearch();
+  // 老板/运营视角切换
+  initBossView();
 }
 function initGlobalSearch(){
   var inp=document.getElementById('globalSearch');

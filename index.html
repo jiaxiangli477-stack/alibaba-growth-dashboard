@@ -43,6 +43,11 @@
   <button class="btn">退出</button>
 </div>
 
+<!-- 视角切换：运营 ↔ 老板 -->
+<div class="viewswitch" id="viewSwitch">
+  <button class="vs-btn on" data-view="ops">📊 运营看板</button>
+  <button class="vs-btn" data-view="boss">👔 老板看板</button>
+</div>
 <!-- 二级导航 -->
 <div class="navbar" id="navbar">
   <div class="tab on" data-tab="period">周期看板</div>
@@ -72,10 +77,12 @@
   <div class="tabpanel" id="panel-peer"></div>
   <!-- ============ 管理 ============ -->
   <div class="tabpanel" id="panel-admin"></div>
+  <!-- ============ 老板看板 ============ -->
+  <div class="tabpanel" id="panel-boss"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="dashboard_data.js?v=20260908-eff-ads"></script>
+<script src="dashboard_data.js?v=20261009-boss"></script>
 <script src="dashboard_data_yh.js"></script>
 <script>
 (function(){
