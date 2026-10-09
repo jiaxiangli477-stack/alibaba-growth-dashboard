@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>国际站运营看板</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261009-boss">
 </head>
 <body>
 
@@ -100,7 +100,7 @@
   }
   function loadApp(){
     var s = document.createElement('script');
-    s.src = 'app.js';
+    s.src = 'app.js?v=20261009-boss';
     s.onload = function(){ if (document.readyState !== 'loading' && typeof boot === 'function') boot(); };
     document.body.appendChild(s);
   }
