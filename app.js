@@ -1547,8 +1547,9 @@ function populatePeriodSel(){
 function bossKey(){ return 'gos_boss_manual_' + (window.V4_STORE || 'store'); }
 function getBossManual(){
   var b = (D.boss && D.boss.manual) || {};
-  var m = { quality_customers: b.quality_customers||0, cac: (b.cac!=null?b.cac:null),
-            sample_orders: b.sample_orders||0, other_spend: b.other_spend||0,
+  var m = { acquisition: b.acquisition||0, quality_customers: b.quality_customers||0, cac: (b.cac!=null?b.cac:null),
+            sample_orders: b.sample_orders||0,
+            annual_fee: b.annual_fee||0, wendin: b.wendin||0, topshow: b.topshow||0, brand_ad: b.brand_ad||0,
             ad_spend_override: (b.ad_spend_override!=null?b.ad_spend_override:null),
             new_count: b.new_count||0, new_selection: b.new_selection||[] };
   try{ var s=localStorage.getItem(bossKey()); if(s){ var o=JSON.parse(s); for(var k in o){ if(k in m) m[k]=o[k]; } } }catch(e){}
@@ -1605,10 +1606,11 @@ function renderBoss(){
   if(!B){ el.innerHTML='<div class="insight warn">该店暂无老板看板数据。请在数据管线上重跑 <code>v4_judge.py</code> 生成 boss 板块。</div>'; return; }
   var k=B.kpi, sp=B.spend||{}, m=getBossManual();
   var adSpend = (m.ad_spend_override!=null && m.ad_spend_override!=='') ? Number(m.ad_spend_override) : (sp.ad_spend||0);
-  var otherSpend = Number(m.other_spend||0);
+  var otherSpend = Number(m.annual_fee||0) + Number(m.wendin||0) + Number(m.topshow||0) + Number(m.brand_ad||0);
   var totalSpend = (adSpend||0) + otherSpend;
-  var qc = Number(m.quality_customers||0);
-  var cac = (m.cac!=null && m.cac!=='') ? Number(m.cac) : (qc>0 ? totalSpend/qc : null);
+  var acq = Number(m.acquisition||0);
+  var qc  = Number(m.quality_customers||0);
+  var cac = (m.cac!=null && m.cac!=='') ? Number(m.cac) : (acq>0 ? totalSpend/acq : null);
   var sample = Number(m.sample_orders||0);
   var adConv = sp.ad_cpl||null;
 
@@ -1617,10 +1619,11 @@ function renderBoss(){
 
   h+='<div class="boss-sec"><h3>💰 花费与获客</h3><div class="kpi-grid">';
   h+=_kpi('广告花费', _m(adSpend), sp.ad_spend_auto?'自动·全站推':'手动', sp.ad_spend_auto?'auto':'manual', 'CPC '+_n(sp.ad_cpc)+' · 点击 '+_n(sp.ad_clicks));
-  h+=_kpi('店铺其他花费', _m(otherSpend), '手动','manual','年费/问鼎/顶展/品牌广告等');
+  h+=_kpi('品牌/其他花费', _m(otherSpend), '手动','manual','年费'+_m(m.annual_fee||0)+' 问鼎'+_m(m.wendin||0)+' 顶展'+_m(m.topshow||0)+' 品牌广告'+_m(m.brand_ad||0));
   h+=_kpi('店铺总花费', _m(totalSpend), '推算','derived','广告花费 + 其他花费');
-  h+=_kpi('获客数量', _n(qc), '手动','manual','运营填写（本周/本月新增客户数）');
-  h+=_kpi('获客成本', _m(cac), (m.cac!=null&&m.cac!=='')?'手动':'推算', (m.cac!=null&&m.cac!=='')?'manual':'derived', qc>0?'总花费 ÷ 获客数量':'填获客数量后自动算');
+  h+=_kpi('获客数量', _n(acq), '手动','manual','运营填写（获客成本分母）');
+  h+=_kpi('优质获客数量', _n(qc), '手动','manual','运营填写（其中优质客户）');
+  h+=_kpi('获客成本', _m(cac), (m.cac!=null&&m.cac!=='')?'手动':'推算', (m.cac!=null&&m.cac!=='')?'manual':'derived', acq>0?'总花费 ÷ 获客数量':'填获客数量后自动算');
   h+=_kpi('广告平均转化成本', _m(adConv), (adConv!=null&&adConv>0)?'自动':'-','auto','单商机成本(全站推CPL)');
   h+=_kpi('样品单', _n(sample), '手动','manual','运营填写');
   h+=_kpi('订单(成交)', _n(k.orders), '自动','auto','GMV '+_m(k.gmv));
@@ -1652,16 +1655,22 @@ function renderBoss(){
   h+='<div class="kpi manual"><span class="tag manual">手动</span><div class="lab">已点选产品</div><div class="val"><span id="bossNewSel">'+m.new_selection.length+'</span></div><div class="sub">下方点选具体产品</div></div>';
   h+='</div>';
   h+='<div id="bossNewSelBox">'+renderNewSelected(m)+'</div>';
-  h+='<div class="np-browse" style="margin-top:12px"><div class="np-browse-head"><span>🛒 产品池点选新品（带图，点击=选中 / 再点=取消）</span><input id="bossNewSearch" class="manual-input np-filter" placeholder="可选：输入关键词过滤…"></div><div id="bossNewPick" class="newpick newpick-open"></div></div>';
+  var poolN=(D.boss.product_pool||[]).length;
+  h+='<button id="bossNewPoolToggle" class="boss-collapse-btn" type="button" style="margin-top:12px">▸ 展开产品池点选新品（'+poolN+' 个，带图）</button>';
+  h+='<div id="bossNewPool" style="display:none;margin-top:10px"><div class="np-browse-head"><span>🛒 产品池点选新品（带图，点击=选中 / 再点=取消）</span><input id="bossNewSearch" class="manual-input np-filter" placeholder="可选：输入关键词过滤…"></div><div id="bossNewPick" class="newpick newpick-open"></div></div>';
   h+='</div>';
 
   h+='<div class="boss-sec"><h3>✍️ 运营录入区（本浏览器即时生效）</h3><div class="boss-manual">';
-  h+='<div class="bm-row"><label>获客数量</label><input data-bm="qc" type="number" value="'+esc(String(m.quality_customers))+'"><span class="bm-ph">本周/本月新增客户数（获客成本的分母）</span></div>';
+  h+='<div class="bm-row"><label>获客数量</label><input data-bm="acq" type="number" value="'+esc(String(m.acquisition))+'"><span class="bm-ph">本周/本月总新增客户数（获客成本分母）</span></div>';
+  h+='<div class="bm-row"><label>优质获客数量</label><input data-bm="qc" type="number" value="'+esc(String(m.quality_customers))+'"><span class="bm-ph">其中优质客户数</span></div>';
   h+='<div class="bm-row"><label>获客成本 (¥)</label><input data-bm="cac" type="text" value="'+esc(String(m.cac==null?'':m.cac))+'"><span class="bm-ph">留空=自动用 总花费÷获客数量</span></div>';
   h+='<div class="bm-row"><label>新品数量</label><input data-bm="newcount" type="number" value="'+esc(String(m.new_count))+'"><span class="bm-ph">本周/本月上新款数</span></div>';
   h+='<div class="bm-row"><label>样品单数量</label><input data-bm="sample" type="number" value="'+esc(String(m.sample_orders))+'"><span class="bm-ph">运营填写</span></div>';
-  h+='<div class="bm-row"><label>店铺其他花费 (¥)</label><input data-bm="other" type="text" value="'+esc(String(m.other_spend))+'"><span class="bm-ph">年费/问鼎/顶展/品牌广告等</span></div>';
-  h+='<div class="bm-row"><label>广告花费覆盖 (¥)</label><input data-bm="adov" type="text" value="'+esc(String(m.ad_spend_override==null?'':m.ad_spend_override))+'"><span class="bm-ph">留空=用自动值 '+_m(sp.ad_spend)+'</span></div>';
+  h+='<div class="bm-row"><label>年费 (¥)</label><input data-bm="annual" type="number" value="'+esc(String(m.annual_fee))+'"><span class="bm-ph">店铺年费/平台费</span></div>';
+  h+='<div class="bm-row"><label>问鼎 (¥)</label><input data-bm="wendin" type="number" value="'+esc(String(m.wendin))+'"><span class="bm-ph">问鼎推广花费</span></div>';
+  h+='<div class="bm-row"><label>顶展 (¥)</label><input data-bm="topshow" type="number" value="'+esc(String(m.topshow))+'"><span class="bm-ph">顶展花费</span></div>';
+  h+='<div class="bm-row"><label>品牌广告 (¥)</label><input data-bm="brand" type="number" value="'+esc(String(m.brand_ad))+'"><span class="bm-ph">品牌广告花费</span></div>';
+  h+='<div class="bm-row"><label>广告花费覆盖 (¥)</label><input data-bm="adov" type="text" value="'+esc(String(m.ad_spend_override==null?'':m.ad_spend_override))+'"><span class="bm-ph">留空=用全站推自动值 '+_m(sp.ad_spend)+'</span></div>';
   h+='<div class="bm-tip">💡 想让老板在别的设备也看到这些数字：把这些值告诉我，我写进看板数据并重新部署（本浏览器 localStorage 仅当前设备可见）。</div>';
   h+='</div></div>';
 
@@ -1672,9 +1681,13 @@ function initBossInteractions(){
   document.querySelectorAll('#panel-boss [data-bm]').forEach(function(inp){
     inp.addEventListener('change', function(){
       var m=getBossManual(), id=this.getAttribute('data-bm'), raw=this.value;
-      if(id==='qc') m.quality_customers = (raw==='')?0:Number(raw);
+      if(id==='acq') m.acquisition = (raw==='')?0:Number(raw);
+      else if(id==='qc') m.quality_customers = (raw==='')?0:Number(raw);
       else if(id==='sample') m.sample_orders = (raw==='')?0:Number(raw);
-      else if(id==='other') m.other_spend = (raw==='')?0:Number(raw);
+      else if(id==='annual') m.annual_fee = (raw==='')?0:Number(raw);
+      else if(id==='wendin') m.wendin = (raw==='')?0:Number(raw);
+      else if(id==='topshow') m.topshow = (raw==='')?0:Number(raw);
+      else if(id==='brand') m.brand_ad = (raw==='')?0:Number(raw);
       else if(id==='cac') m.cac = (raw==='')?null:Number(raw);
       else if(id==='adov') m.ad_spend_override = (raw==='')?null:Number(raw);
       else if(id==='newcount') m.new_count = (raw==='')?0:Number(raw);
@@ -1689,6 +1702,15 @@ function initBossInteractions(){
     body.style.display = open?'none':'block';
     var n=(D.boss.hot_products||[]).length;
     hotToggle.textContent = open ? ('▸ 展开看爆品链接（'+n+' 个）') : '▾ 收起爆品链接';
+  }); }
+  // 新品产品池展开/收起
+  var newToggle=document.getElementById('bossNewPoolToggle');
+  if(newToggle){ newToggle.addEventListener('click', function(){
+    var body=document.getElementById('bossNewPool'); if(!body) return;
+    var open = body.style.display!=='none';
+    body.style.display = open?'none':'block';
+    var n=(D.boss.product_pool||[]).length;
+    newToggle.textContent = open ? ('▸ 展开产品池点选新品（'+n+' 个，带图）') : '▾ 收起产品池';
   }); }
   // 新品点选：默认显示带图产品池（无需先输入），可过滤，点击选中/取消；点选时局部刷新不整页重渲染
   var sInp=document.getElementById('bossNewSearch'), pick=document.getElementById('bossNewPick');

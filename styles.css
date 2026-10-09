@@ -262,7 +262,7 @@ body.view-boss #panel-boss{display:block !important}
 .np-empty{padding:14px;color:var(--muted);font-size:12px}
 
 /* 运营录入区 */
-.boss-manual{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.boss-manual{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));column-gap:32px}
 .bm-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .bm-row label{min-width:132px;font-size:12px;font-weight:700;color:var(--ink)}
 .bm-row input{border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12px;width:180px}
