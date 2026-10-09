@@ -1536,11 +1536,11 @@ function populatePeriodSel(){
   if(PERIOD==='month'){
     (D.months||[]).forEach(function(m,i){ var o=document.createElement('option'); o.value=i; o.textContent=m.month_start.slice(0,7)+'月 ('+m.month_start+'~'+m.month_end+')'; ws.appendChild(o); });
     if(D.months&&D.months.length) ws.value = D.months.length-1;
-    ws.onchange=function(){ SELECTED_MONTH=parseInt(this.value,10); updateDateLabel(); renderPeriod(); };
+    ws.onchange=function(){ SELECTED_MONTH=parseInt(this.value,10); updateDateLabel(); renderPeriod(); renderBossIfActive(); };
   } else {
     (D.weeks||[]).forEach(function(w,i){ var o=document.createElement('option'); o.value=i; o.textContent='2026 第'+weekNum(w)+'周 ('+w.week_start+'~'+w.week_end+')'; ws.appendChild(o); });
     if(D.weeks&&D.weeks.length) ws.value = D.weeks.length-1;
-    ws.onchange=function(){ SELECTED_WEEK=parseInt(this.value,10); updateDateLabel(); renderPeriod(); };
+    ws.onchange=function(){ SELECTED_WEEK=parseInt(this.value,10); updateDateLabel(); renderPeriod(); renderBossIfActive(); };
   }
 }
 /* ===================== 老板看板 ===================== */
@@ -1564,9 +1564,41 @@ function renderNewSelected(m){
   var rows=m.new_selection.map(function(id){ return pool[id]; }).filter(Boolean);
   if(!rows.length) return '<div class="insight" style="margin-bottom:8px">尚未选择新品。用下方搜索框从产品池（按点击 Top200）里点选。</div>';
   var h='<table class="boss-table"><thead><tr><th>产品(点击看链接)</th><th>分级</th><th>曝光</th><th>点击</th><th>商机</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>';
-  rows.forEach(function(p){ h+='<tr><td><a href="'+(p.detail_url||'#')+'" target="_blank">'+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>'; });
+  rows.forEach(function(p){ h+='<tr><td class="prod-cell"><a href="'+(p.detail_url||'#')+'" target="_blank">'+(p.main_image?'<img class="prod-thumb" src="'+esc(p.main_image)+'" alt=""> ':'')+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>'; });
   return h+'</tbody></table>';
 }
+/* 老板面板复用运营看板的漏斗/承接效率卡片(每项含 同行优秀/平均 + 较比上周) */
+function funnelCardsHtml(){
+  var fun=getFunnel();
+  var h='<div class="card"><div class="kpi-grid">';
+  fun.forEach(function(f){
+    h+='<div class="kpi"><div class="k-label">'+esc(f.label)+'</div>';
+    h+='<div class="k-val">'+fmt(f.fmt,f.cur)+'<small>'+(f.unit?' '+esc(f.unit):'')+'</small></div>';
+    if(f.note) h+='<div class="k-meta"><span class="muted small">'+esc(f.note)+'</span></div>';
+    h+='<div class="k-meta">'+wowHtml(f.wow)+'<span class="gap">'+gapHtml(f.cur,f.rival_avg,f.rival_good,f.lower_better)+'</span></div></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+function bearingCardsHtml(){
+  var h='<div class="card"><div class="kpi-grid">';
+  getBearing().forEach(function(b){
+    var has = (b.rival_avg!=null);
+    var bad = has ? (b.lower_better ? (b.cur > b.rival_avg) : (b.cur < b.rival_avg)) : false;
+    var dot = has ? (bad ? '<span class="dot red"></span>未达标 ' : '<span class="dot green"></span>达标 ') : '';
+    h+='<div class="kpi"><div class="k-label">'+dot+esc(b.label)+'</div>';
+    h+='<div class="k-val">'+fmt(b.fmt,b.cur)+'</div>';
+    h+='<div class="k-meta"><span class="gap">'+gapHtml(b.cur,b.rival_avg,b.rival_good,b.lower_better)+'</span></div></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+function bossPeriodLabel(){
+  var _sw = (PERIOD==='week') ? selectedWeek() : null;
+  var _sm = (PERIOD==='month') ? selectedMonth() : null;
+  return _sm ? _sm.month_label : (_sw ? (_sw.week_start+' ~ '+_sw.week_end) : ((D.meta||{}).week_label||''));
+}
+function renderBossIfActive(){ if(document.body && document.body.classList.contains('view-boss')) renderBoss(); }
 function renderBoss(){
   var el=document.getElementById('panel-boss'); if(!el) return;
   var B=D.boss;
@@ -1594,15 +1626,13 @@ function renderBoss(){
   h+=_kpi('订单(成交)', _n(k.orders), '自动','auto','GMV '+_m(k.gmv));
   h+='</div></div>';
 
-  h+='<div class="boss-sec"><h3>📈 流量 · 接待</h3><div class="kpi-grid">';
-  h+=_kpi('总曝光', _n(k.total_imps),'自动','auto','访客 '+_n(k.uv_cnt));
-  h+=_kpi('总点击', _n(k.total_clk),'自动','auto','搜索'+_n(k.se_clk)+' + 推广'+_n(k.camp_clk));
-  h+=_kpi('询盘', _n(k.inquiries),'自动','auto','');
-  h+=_kpi('TM询盘', _n(k.tm_inquiries),'自动','auto','Alibaba TradeManager');
-  h+=_kpi('回复率(30d)', _pct(k.reply_rate),'自动','auto','');
-  h+=_kpi('5分钟首响率', _pct(k.reply_5min),'自动','auto','');
-  h+=_kpi('平均回复时长', (k.avg_reply_time==null?'-':k.avg_reply_time+'h'),'自动','auto','');
-  h+='</div></div>';
+  h+='<div class="boss-sec"><h3>📈 店铺漏斗 <span class="flabel">'+esc(bossPeriodLabel())+' · 每项含 同行优秀/平均 + 较比上周</span></h3>';
+  h+=funnelCardsHtml();
+  h+='</div>';
+
+  h+='<div class="boss-sec"><h3>📈 承接效率 <span class="flabel">回复三项 + 访客成交率 vs 同行优秀/平均</span></h3>';
+  h+=bearingCardsHtml();
+  h+='</div>';
 
   h+='<div class="boss-sec"><h3>🔥 爆品（点产品名看链接）</h3><div class="kpi-grid" style="margin-bottom:12px">';
   h+=_kpi('爆品数量', _n(B.hot_count),'平台分级','auto','prod_level=爆品');
@@ -1611,7 +1641,7 @@ function renderBoss(){
   h+='</div>';
   h+='<table class="boss-table"><thead><tr><th>#</th><th>产品(链接)</th><th>分级</th><th>曝光</th><th>点击</th><th>询盘</th><th>TM</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>';
   (B.hot_products||[]).forEach(function(p,i){
-    h+='<tr><td>'+(i+1)+'</td><td><a href="'+(p.detail_url||'#')+'" target="_blank">'+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.tm)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>';
+    h+='<tr><td>'+(i+1)+'</td><td class="prod-cell"><a href="'+(p.detail_url||'#')+'" target="_blank">'+(p.main_image?'<img class="prod-thumb" src="'+esc(p.main_image)+'" alt=""> ':'')+esc(p.title)+'</a></td><td><span class="lvl lvl-'+(p.level||'')+'">'+(p.level||'-')+'</span></td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.tm)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>';
   });
   h+='</tbody></table></div>';
 
@@ -1651,7 +1681,7 @@ function initBossInteractions(){
       var list=pool.filter(function(p){ return !q || (p.title||'').toLowerCase().indexOf(q)>=0; }).slice(0,30);
       pick.style.display=list.length?'block':'none';
       pick.innerHTML=list.map(function(p){ var sel=m.new_selection.indexOf(p.product_id)>=0;
-        return '<div class="newpick-item'+(sel?' sel':'')+'" data-pid="'+p.product_id+'">'+esc(p.title)+' <span class="np-meta">· 点击'+_n(p.clicks)+' · '+(p.level||'')+'</span></div>'; }).join('');
+        return '<div class="newpick-item'+(sel?' sel':'')+'" data-pid="'+p.product_id+'">'+(p.main_image?'<img class="np-thumb" src="'+esc(p.main_image)+'" alt=""> ':'')+esc(p.title)+' <span class="np-meta">· 点击'+_n(p.clicks)+' · '+(p.level||'')+'</span></div>'; }).join('');
     });
     pick.addEventListener('click', function(e){
       var it=e.target.closest('.newpick-item'); if(!it) return;
@@ -1699,8 +1729,8 @@ function boot(){
     };
   });
   // 周/月切换
-  document.getElementById('segWeek').onclick=function(){ PERIOD='week'; this.classList.add('on'); document.getElementById('segMonth').classList.remove('on'); updateDateLabel(); populatePeriodSel(); renderPeriod(); };
-  document.getElementById('segMonth').onclick=function(){ PERIOD='month'; this.classList.add('on'); document.getElementById('segWeek').classList.remove('on'); updateDateLabel(); populatePeriodSel(); renderPeriod(); };
+  document.getElementById('segWeek').onclick=function(){ PERIOD='week'; this.classList.add('on'); document.getElementById('segMonth').classList.remove('on'); updateDateLabel(); populatePeriodSel(); renderPeriod(); renderBossIfActive(); };
+  document.getElementById('segMonth').onclick=function(){ PERIOD='month'; this.classList.add('on'); document.getElementById('segWeek').classList.remove('on'); updateDateLabel(); populatePeriodSel(); renderPeriod(); renderBossIfActive(); };
   // 全局搜索
   initGlobalSearch();
   // 老板/运营视角切换
