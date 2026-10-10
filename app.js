@@ -1804,15 +1804,15 @@ function exportView(view, fmt){
   if(typeof D==='undefined' || !D){ return; }
   if(fmt==='csv'){ exportCSV(view); return; }
   if(fmt==='xlsx'){ exportXLSX(view); return; }
-  var store=(D.meta&&D.meta.store_id)||'store';
+  var store=window.V4_STORE||((D.meta&&D.meta.store_id)||'store');
   _downloadHTML(store+'_'+(view==='boss'?'老板看板':'运营看板')+'_数据留存_'+(bossPeriodLabel()||'').replace(/[~\-\/\s:]/g,'')+'.html', buildReportHTML(view));
 }
 function exportCSV(view){
   if(typeof D==='undefined' || !D){ return; }
-  var meta=D.meta||{}, store=(meta.store_id||''), B=D.boss||{}, k=B.kpi||{}, sp=B.spend||{};
+  var meta=D.meta||{}, store=(window.V4_STORE||meta.store_id||'store'), B=D.boss||{}, k=B.kpi||{}, sp=B.spend||{};
   var plabel=bossPeriodLabel(), ptype=(PERIOD==='month'?'月':'周');
   var R=[];
-  R.push(_csvLine(['店铺', meta.store_name||store, '店铺ID', store, '周期', ptype, '区间', plabel, '导出时间', new Date().toLocaleString()]));
+  R.push(_csvLine(['店铺', meta.store_name||store, '店铺代码', store, '周期', ptype, '区间', plabel, '导出时间', new Date().toLocaleString()]));
   R.push(_csvLine([]));
   var fun=getFunnel();
   var m=getBossManual();
@@ -1893,7 +1893,7 @@ function exportXLSX(view){
   ws.getCell(1,1).value='📁 '+store+' · '+baseName+' · 数据留存'; ws.getCell(1,1).font={bold:true,size:14,color:{argb:'FFFFFFFF'}}; ws.getCell(1,1).alignment={horizontal:'left',vertical:'middle',indent:1};
   ws.getRow(1).height=30;
   ws.mergeCells(2,1,2,nC);
-  ws.getCell(2,1).value='店铺ID: '+(meta.store_id||'-')+' ｜ 周期: '+ptype+' ｜ 区间: '+plabel+' ｜ 导出: '+new Date().toLocaleString();
+  ws.getCell(2,1).value='店铺: '+(window.V4_STORE||meta.store_id||'-')+' ｜ 周期: '+ptype+' ｜ 区间: '+plabel+' ｜ 导出: '+new Date().toLocaleString();
   ws.getCell(2,1).font={size:10,color:{argb:XLS_C.sub}};
   ws.getCell(2,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF7FAFC'}};
   ws.getCell(2,1).alignment={horizontal:'left',vertical:'middle',indent:1};
@@ -1974,7 +1974,7 @@ function buildReportHTML(view){
   var H=[];
   var baseName=(view==='boss'?'老板看板':'运营看板');
   H.push('<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(meta.store_name||'')+' '+baseName+' 数据留存</title><style>'+RPT_CSS+'</style></head><body><div class="wrap">');
-  H.push('<div class="rhead"><div><div class="rt">📁 '+esc(meta.store_name||'')+' · '+baseName+' · 数据留存</div><div class="rs">店铺ID '+esc(meta.store_id||'-')+' ｜ '+ptype+' · '+esc(plabel)+' · 导出 '+new Date().toLocaleString()+' ｜ <b class="c-g">绿</b>=自动 <b class="c-o">黄</b>=手动 <b class="c-b">蓝</b>=推算</div></div><button class="rprint" onclick="window.print()">🖨 打印 / 存为PDF</button></div>');
+  H.push('<div class="rhead"><div><div class="rt">📁 '+esc(meta.store_name||'')+' · '+baseName+' · 数据留存</div><div class="rs">店铺 '+esc(window.V4_STORE||meta.store_id||'-')+' ｜ '+ptype+' · '+esc(plabel)+' · 导出 '+new Date().toLocaleString()+' ｜ <b class="c-g">绿</b>=自动 <b class="c-o">黄</b>=手动 <b class="c-b">蓝</b>=推算</div></div><button class="rprint" onclick="window.print()">🖨 打印 / 存为PDF</button></div>');
   H.push('<section><h2>💰 花费与获客</h2><div class="cards">');
   H.push(_rptKpi('广告花费', _m(adSpend), sp.ad_spend_auto?'auto':'manual', 'CPC '+(sp.ad_cpc==null?'-':sp.ad_cpc)+' · 点击 '+(sp.ad_clicks==null?'-':sp.ad_clicks)));
   H.push(_rptKpi('品牌/其他花费', _m(otherSpend), 'manual', '年费'+(m.annual_fee||0)+' 问鼎'+(m.wendin||0)+' 顶展'+(m.topshow||0)+' 品牌广告'+(m.brand_ad||0)));
