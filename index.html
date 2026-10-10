@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>国际站运营看板</title>
-<link rel="stylesheet" href="styles.css?v=20261009-boss7">
+<link rel="stylesheet" href="styles.css?v=20261009-boss8">
 </head>
 <body>
 
@@ -50,7 +50,7 @@
   <span class="vs-spacer"></span>
   <span class="vs-export">⬇ 导出
     <select id="bossExportView" class="vs-select"><option value="boss">老板看板</option><option value="ops">运营看板</option></select>
-    <select id="bossExportFmt" class="vs-select"><option value="html">HTML报告</option><option value="csv">CSV</option></select>
+    <select id="bossExportFmt" class="vs-select"><option value="xlsx">Excel格式化表格</option><option value="html">HTML报告</option><option value="csv">CSV</option></select>
     <button type="button" id="bossExportBtn" class="vs-export-btn">导出</button>
   </span>
 </div>
@@ -87,8 +87,9 @@
   <div class="tabpanel" id="panel-boss"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="dashboard_data.js?v=20261009-boss7"></script>
+<script src="dashboard_data.js?v=20261009-boss8"></script>
 <script src="dashboard_data_yh.js"></script>
 <script>
 (function(){
@@ -106,7 +107,7 @@
   }
   function loadApp(){
     var s = document.createElement('script');
-    s.src = 'app.js?v=20261009-boss7';
+    s.src = 'app.js?v=20261009-boss8';
     s.onload = function(){ if (document.readyState !== 'loading' && typeof boot === 'function') boot(); };
     document.body.appendChild(s);
   }

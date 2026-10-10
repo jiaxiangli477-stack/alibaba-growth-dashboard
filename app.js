@@ -1784,7 +1784,7 @@ function setView(v){
 /* ===== 导出 CSV（老板/运营自选，当前周期）===== */
 function _csvCell(v){ v=(v==null?'':String(v)); return '"'+v.replace(/"/g,'""')+'"'; }
 function _csvLine(a){ return a.map(_csvCell).join(','); }
-function _pctStr(x){ return (x==null)?'':(Math.round(x*100)+'%'); }
+function _pctStr(x){ return (x==null)?'':(Math.round(x*10)/10)+'%'; }
 function _downloadCSV(name, text){
   try{
     var blob=new Blob(['\uFEFF'+text], {type:'text/csv;charset=utf-8;'});
@@ -1804,6 +1804,7 @@ function _downloadHTML(name, html){
 function exportView(view, fmt){
   if(typeof D==='undefined' || !D){ return; }
   if(fmt==='csv'){ exportCSV(view); return; }
+  if(fmt==='xlsx'){ exportXLSX(view); return; }
   var store=(D.meta&&D.meta.store_id)||'store';
   _downloadHTML(store+'_'+(view==='boss'?'老板看板':'运营看板')+'_'+(bossPeriodLabel()||'').replace(/[~\-\/\s:]/g,'')+'.html', buildReportHTML(view));
 }
@@ -1871,9 +1872,215 @@ function exportCSV(view){
   }
   _downloadCSV((store||'store')+'_'+(view==='boss'?'老板看板':'运营看板')+'_'+(plabel||'').replace(/[~\-\/\s:]/g,'')+'.csv', R.join('\r\n'));
 }
+/* ===== Excel 格式化表格导出（ExcelJS：真实 xlsx，带配色/边框/列宽/冻结表头，WPS/Excel 打开即美观）===== */
+var XLS_C={ navy:'FF16324F', head:'FF2C4A6E', sub:'FF5B6B7B', zebra:'FFF7FAFC', border:'FFD9E2EC',
+  g:'FF1A7F4B', gFill:'FFE6F4EC', r:'FFC0392B', rFill:'FFFDECEA', r2:'FFD64545',
+  o:'FFB8741A', oFill:'FFFBF0DF', b:'FF2B6CB0', bFill:'FFEBF1FB', link:'FF2563EB', txt:'FF1F2733' };
+function _xlsBorder(){ return {top:{style:'thin',color:{argb:XLS_C.border}},left:{style:'thin',color:{argb:XLS_C.border}},bottom:{style:'thin',color:{argb:XLS_C.border}},right:{style:'thin',color:{argb:XLS_C.border}}}; }
+function _xNumFmt(f){ if(f==='pct') return '0.00"%"'; if(f==='money') return '"$"#,##0'; return '#,##0'; }
+function _xTypeStyle(t){ if(t==='自动') return {fill:XLS_C.gFill,color:XLS_C.g}; if(t==='手动') return {fill:XLS_C.oFill,color:XLS_C.o}; return {fill:XLS_C.bFill,color:XLS_C.b}; }
+function _xLvlStyle(lvl){ if(lvl==='爆品') return {fill:XLS_C.rFill,color:XLS_C.r}; if(lvl==='优品') return {fill:XLS_C.oFill,color:XLS_C.o}; if(lvl==='潜力优品') return {fill:XLS_C.bFill,color:XLS_C.b}; return null; }
+function _xcell(cell, v, o){
+  o=o||{};
+  if(v==null||v==='') v='-';
+  if(o.link && v!=='-') cell.value={text:v,hyperlink:o.link};
+  else cell.value=v;
+  if(o.numFmt && typeof v==='number') cell.numFmt=o.numFmt;
+  var font={size:11,color:{argb:o.color||XLS_C.txt}};
+  if(o.bold) font.bold=true;
+  if(o.link){ font.underline=true; font.color={argb:XLS_C.link}; }
+  cell.font=font;
+  if(o.fill) cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}};
+  cell.border=_xlsBorder();
+  cell.alignment={horizontal:o.align||'left',vertical:'middle',wrapText:!!o.wrap,indent:1};
+  return cell;
+}
+function _xlsSheet(wb,name,title,sub,heads,widths){
+  var nC=heads.length, i;
+  var ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:3}]});
+  ws.columns=widths.map(function(w){ return {width:w}; });
+  ws.mergeCells(1,1,1,nC);
+  for(i=1;i<=nC;i++){ ws.getCell(1,i).fill={type:'pattern',pattern:'solid',fgColor:{argb:XLS_C.navy}}; }
+  ws.getCell(1,1).value=title; ws.getCell(1,1).font={bold:true,size:14,color:{argb:'FFFFFFFF'}}; ws.getCell(1,1).alignment={horizontal:'left',vertical:'middle',indent:1};
+  ws.getRow(1).height=30;
+  ws.mergeCells(2,1,2,nC);
+  ws.getCell(2,1).value=sub; ws.getCell(2,1).font={size:10,color:{argb:XLS_C.sub}}; ws.getCell(2,1).alignment={horizontal:'left',vertical:'middle',indent:1};
+  ws.getRow(2).height=18;
+  ws.getRow(3).height=22;
+  heads.forEach(function(h,j){ var c=ws.getCell(3,j+1); c.value=h; c.font={bold:true,size:11,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XLS_C.head}}; c.alignment={horizontal:'center',vertical:'middle'}; c.border=_xlsBorder(); });
+  return ws;
+}
+function _xlsKpiSheet(wb, store, baseName, sub, rows){
+  var ws=_xlsSheet(wb,'总览', store+' · '+baseName+' · 花费与获客', sub+' ｜ 绿=自动 · 黄=手动 · 蓝=推算', ['指标','值','类型','说明'], [24,16,10,54]);
+  var r=4;
+  rows.forEach(function(row,i){
+    var zf=(i%2===1)?XLS_C.zebra:null;
+    var g=ws.getRow(r);
+    _xcell(g.getCell(1), row[0], {bold:true, fill:zf});
+    _xcell(g.getCell(2), row[1], {numFmt:row[2], bold:true, align:'right', fill:zf});
+    var ts=_xTypeStyle(row[3]);
+    _xcell(g.getCell(3), row[3], {bold:true, align:'center', fill:ts.fill, color:ts.color});
+    _xcell(g.getCell(4), row[4]||'', {color:XLS_C.sub, fill:zf, wrap:true});
+    r++;
+  });
+  if(r>4) ws.autoFilter={from:{row:3,column:1},to:{row:r-1,column:4}};
+  return ws;
+}
+function _xlsFunnelSheet(wb, store, baseName, sub, fun){
+  var ws=_xlsSheet(wb,'店铺漏斗', store+' · '+baseName+' · 店铺漏斗', sub, ['指标','本期','较比上周','同行优秀','同行平均'], [28,14,12,12,12]);
+  var r=4;
+  (fun||[]).forEach(function(f,i){
+    var zf=(i%2===1)?XLS_C.zebra:null;
+    var g=ws.getRow(r);
+    _xcell(g.getCell(1), f.label, {bold:true, fill:zf});
+    _xcell(g.getCell(2), f.cur, {numFmt:_xNumFmt(f.fmt), bold:true, align:'right', fill:zf});
+    if(f.wow==null){ _xcell(g.getCell(3), '-', {align:'center', color:XLS_C.sub, fill:zf}); }
+    else{
+      var up=f.wow>=0, good=f.lower_better?!up:up;
+      _xcell(g.getCell(3), (up?'▲ +':'▼ ')+Math.round(f.wow*10)/10+'%', {bold:true, align:'center', color:good?XLS_C.g:XLS_C.r2, fill:zf});
+    }
+    _xcell(g.getCell(4), f.rival_good, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
+    _xcell(g.getCell(5), f.rival_avg, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
+    r++;
+  });
+  if(r>4) ws.autoFilter={from:{row:3,column:1},to:{row:r-1,column:5}};
+  return ws;
+}
+function _xlsBearingSheet(wb, store, baseName, sub, bea){
+  var ws=_xlsSheet(wb,'承接效率', store+' · '+baseName+' · 承接效率', sub, ['指标','本期','达标','同行优秀','同行平均'], [28,14,10,12,12]);
+  var r=4;
+  (bea||[]).forEach(function(b,i){
+    var zf=(i%2===1)?XLS_C.zebra:null;
+    var g=ws.getRow(r);
+    var nf=(b.fmt==='pct')?'0.00"%"':null;
+    _xcell(g.getCell(1), b.label, {bold:true, fill:zf});
+    _xcell(g.getCell(2), b.cur, {numFmt:nf, bold:true, align:'right', fill:zf});
+    var has=(b.rival_avg!=null);
+    var bad=has?(b.lower_better?(b.cur>b.rival_avg):(b.cur<b.rival_avg)):false;
+    if(!has){ _xcell(g.getCell(3), '-', {align:'center', color:XLS_C.sub, fill:zf}); }
+    else{ _xcell(g.getCell(3), bad?'未达标':'达标', {bold:true, align:'center', color:bad?XLS_C.r2:XLS_C.g, fill:bad?XLS_C.rFill:XLS_C.gFill}); }
+    _xcell(g.getCell(4), b.rival_good, {numFmt:nf, align:'right', fill:zf});
+    _xcell(g.getCell(5), b.rival_avg, {numFmt:nf, align:'right', fill:zf});
+    r++;
+  });
+  if(r>4) ws.autoFilter={from:{row:3,column:1},to:{row:r-1,column:5}};
+  return ws;
+}
+function _xlsProductSheet(wb, name, store, baseName, sub, title, products, withId){
+  var heads, widths;
+  if(withId){ heads=['产品','ID','分级','曝光','点击','商机','订单','GMV($)','链接']; widths=[52,16,10,11,11,10,8,12,40]; }
+  else{ heads=['#','产品','分级','曝光','点击','询盘','TM','订单','GMV($)','链接']; widths=[5,52,10,11,11,10,8,8,12,40]; }
+  var ws=_xlsSheet(wb,name, store+' · '+baseName+' · '+title, sub, heads, widths);
+  var arr=products||[];
+  if(!arr.length){ _xcell(ws.getCell(4,1), '（无产品）', {color:XLS_C.sub}); return ws; }
+  var r=4;
+  arr.slice(0,100).forEach(function(p,i){
+    var zf=(i%2===1)?XLS_C.zebra:null;
+    var g=ws.getRow(r); g.height=20;
+    var c=1;
+    var ls=_xLvlStyle(p.level);
+    if(withId){
+      _xcell(g.getCell(c++), p.title, {link:p.detail_url||null, wrap:true, fill:zf});
+      _xcell(g.getCell(c++), p.product_id, {color:XLS_C.sub, fill:zf});
+    } else {
+      _xcell(g.getCell(c++), i+1, {align:'center', color:XLS_C.sub, fill:zf});
+      _xcell(g.getCell(c++), p.title, {link:p.detail_url||null, wrap:true, fill:zf});
+    }
+    _xcell(g.getCell(c++), p.level||'-', {align:'center', bold:true, fill:ls?ls.fill:zf, color:ls?ls.color:undefined});
+    _xcell(g.getCell(c++), p.imps, {numFmt:'#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(c++), p.clicks, {numFmt:'#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(c++), p.inquiries, {numFmt:'#,##0', align:'right', fill:zf});
+    if(!withId) _xcell(g.getCell(c++), p.tm, {numFmt:'#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(c++), p.orders, {numFmt:'#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(c++), p.gmv, {numFmt:'"$"#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(c++), p.detail_url||'', {color:XLS_C.sub, fill:zf});
+    r++;
+  });
+  if(arr.length>100){ ws.getCell(r,1).value='仅展示前 100 个，共 '+arr.length+' 个'; ws.getCell(r,1).font={size:10,italic:true,color:{argb:XLS_C.sub}}; }
+  ws.autoFilter={from:{row:3,column:1},to:{row:3+Math.min(arr.length,100)-1,column:heads.length}};
+  return ws;
+}
+function _xlsStaffSheet(wb, store, sub){
+  var ws=_xlsSheet(wb,'客服子账号', store+' · 运营看板 · 客服子账号', sub, ['子账号','TM接待','询盘PV','成交($)','成交单','极速回复率','及时回复率','平均回复时长(h)','商机→成交','超12h未回'], [20,10,11,12,10,12,12,15,12,12]);
+  var arr=D.staff_cs||[];
+  if(!arr.length){ _xcell(ws.getCell(4,1), '（暂无数据）', {color:XLS_C.sub}); return ws; }
+  var r=4;
+  arr.forEach(function(x,i){
+    var zf=(i%2===1)?XLS_C.zebra:null;
+    var g=ws.getRow(r);
+    _xcell(g.getCell(1), x.name||'', {bold:true, fill:zf});
+    _xcell(g.getCell(2), x.tm, {numFmt:'#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(3), x.fb_pv, {numFmt:'#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(4), x.rcvd_amt, {numFmt:'"$"#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(5), x.order_cnt, {numFmt:'#,##0', align:'right', fill:zf});
+    _xcell(g.getCell(6), x.fst5min, {numFmt:'0.0%', align:'right', fill:zf});
+    _xcell(g.getCell(7), x.reply_rate, {numFmt:'0.0%', align:'right', fill:zf});
+    _xcell(g.getCell(8), x.avg_reply, {align:'right', fill:zf});
+    _xcell(g.getCell(9), x.bus_to_ord, {numFmt:'0.0%', align:'right', fill:zf});
+    _xcell(g.getCell(10), x.over12h, {numFmt:'#,##0', align:'right', fill:zf});
+    r++;
+  });
+  ws.autoFilter={from:{row:3,column:1},to:{row:r-1,column:10}};
+  return ws;
+}
+function exportXLSX(view){
+  if(typeof D==='undefined' || !D){ return; }
+  if(typeof ExcelJS==='undefined'){ alert('ExcelJS 组件未加载（网络拦截了 CDN），请刷新重试，或先选 CSV / HTML报告 导出'); return; }
+  var meta=D.meta||{}, store=meta.store_name||meta.store_id||'store', B=D.boss||{}, k=B.kpi||{}, sp=B.spend||{};
+  var plabel=bossPeriodLabel(), ptype=(PERIOD==='month'?'月':'周'), baseName=(view==='boss'?'老板看板':'运营看板');
+  var sub=ptype+' · '+plabel+' · 导出 '+new Date().toLocaleString();
+  var wb=new ExcelJS.Workbook();
+  wb.creator='Alibaba Growth OS'; wb.modified=new Date();
+  var fun=getFunnel(), bea=getBearing(), m=getBossManual();
+  var adSpend=(m.ad_spend_override!=null&&m.ad_spend_override!=='')?Number(m.ad_spend_override):(sp.ad_spend||0);
+  var otherSpend=Number(m.annual_fee||0)+Number(m.wendin||0)+Number(m.topshow||0)+Number(m.brand_ad||0);
+  var totalSpend=(adSpend||0)+otherSpend;
+  var acq=Number(m.acquisition||0), qc=Number(m.quality_customers||0);
+  var cac=(m.cac!=null&&m.cac!=='')?Number(m.cac):(acq>0?totalSpend/acq:null);
+  if(view==='boss'){
+    _xlsKpiSheet(wb, store, baseName, sub, [
+      ['广告花费', adSpend, '"¥"#,##0', sp.ad_spend_auto?'自动':'手动', 'CPC '+(sp.ad_cpc==null?'':sp.ad_cpc)+' 点击 '+(sp.ad_clicks==null?'':sp.ad_clicks)],
+      ['品牌/其他花费', otherSpend, '"¥"#,##0', '手动', '年费'+(m.annual_fee||0)+' 问鼎'+(m.wendin||0)+' 顶展'+(m.topshow||0)+' 品牌广告'+(m.brand_ad||0)],
+      ['店铺总花费', totalSpend, '"¥"#,##0', '推算', '广告 '+adSpend.toFixed(0)+' + 其他 '+otherSpend.toFixed(0)],
+      ['获客数量', acq, '#,##0', '手动', '获客成本分母'],
+      ['优质获客数量', qc, '#,##0', '手动', '其中优质客户'],
+      ['获客成本', cac, '"¥"#,##0.00', (m.cac!=null&&m.cac!=='')?'手动':'推算', acq>0?'总花费÷获客数量('+acq+')':'填获客数量后自动算'],
+      ['广告平均转化成本(CPL)', sp.ad_cpl, '"¥"#,##0.00', '自动', 'CPL 单商机成本'],
+      ['样品单', m.sample_orders, '#,##0', '手动', m.sample_products||''],
+      ['订单(成交)', k.orders, '#,##0', '自动', (m.order_products?m.order_products+' · ':'')+'GMV $'+(k.gmv==null?'':k.gmv)],
+      ['爆品数量', B.hot_count, '#,##0', '自动', ''],
+      ['优品数量', B.premium_count, '#,##0', '自动', ''],
+      ['潜力优品数量', B.potential_count, '#,##0', '自动', ''],
+      ['新品数量', m.new_count, '#,##0', '手动', '已点选 '+(m.new_selection||[]).length+' 个产品']
+    ]);
+  }
+  _xlsFunnelSheet(wb, store, baseName, sub, fun);
+  _xlsBearingSheet(wb, store, baseName, sub, bea);
+  if(view==='boss'){
+    _xlsProductSheet(wb,'爆品', store, baseName, sub, '爆品', B.hot_products, false);
+    _xlsProductSheet(wb,'优品', store, baseName, sub, '优品', B.premium_products, false);
+    _xlsProductSheet(wb,'潜力优品', store, baseName, sub, '潜力优品', B.potential_products, false);
+    var pool={}; (B.product_pool||[]).forEach(function(p){ pool[p.product_id]=p; });
+    var sel=(m.new_selection||[]).map(function(id){ return pool[id]; }).filter(Boolean);
+    _xlsProductSheet(wb,'已选新品', store, baseName, sub, '已选新品', sel, true);
+  } else {
+    _xlsStaffSheet(wb, store, sub);
+  }
+  wb.xlsx.writeBuffer().then(function(buf){
+    _downloadXLSX(store+'_'+baseName+'_'+(plabel||'').replace(/[~\-\/\s:]/g,'')+'.xlsx', buf);
+  }).catch(function(e){ alert('Excel 导出失败: '+(e&&e.message?e.message:e)); });
+}
+function _downloadXLSX(name, buf){
+  try{
+    var blob=new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url=URL.createObjectURL(blob); var a=document.createElement('a');
+    a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  }catch(e){ alert('导出失败: '+(e&&e.message?e.message:e)); }
+}
 var RPT_CSS='*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#eef1f4;color:#1f2733;font-size:13px}.wrap{max-width:1180px;margin:0 auto;padding:20px}.rhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#16324f;color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:16px}.rt{font-size:20px;font-weight:800}.rs{margin-top:6px;font-size:12px;opacity:.92}.rs b{padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700}.rs .c-g{background:#1a7f4b}.rs .c-o{background:#d98a1f}.rs .c-b{background:#2b6cb0}.rprint{background:#f5c518;color:#1f2733;border:0;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}.rprint:hover{filter:brightness(.96)}section{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:14px}h2{font-size:16px;font-weight:800;color:#16324f;margin:0 0 14px;padding-left:10px;border-left:4px solid #f5c518}h2 .hsub{font-size:12px;font-weight:500;color:#7a8794;margin-left:8px}h2 .cnt{font-size:12px;font-weight:700;color:#2b6cb0;background:#eaf1fb;border-radius:10px;padding:1px 9px;margin-left:6px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:11px}.kpi{position:relative;border:1px solid #e2e8f0;border-left:4px solid #ccc;border-radius:9px;padding:12px 14px}.kpi.auto{border-left-color:#1a7f4b}.kpi.manual{border-left-color:#d98a1f}.kpi.derived{border-left-color:#2b6cb0}.ktag{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px}.kpi.auto .ktag{background:#e6f4ec;color:#1a7f4b}.kpi.manual .ktag{background:#fbf0df;color:#b8741a}.kpi.derived .ktag{background:#eaf1fb;color:#2b6cb0}.klab{color:#5b6b7b;font-size:12px;margin-bottom:6px;padding-right:36px}.kval{font-size:22px;font-weight:800;line-height:1.15}.ksub{margin-top:6px;font-size:11px;color:#8593a1;line-height:1.45;word-break:break-all}.tbl{width:100%;border-collapse:collapse;font-size:12px}.tbl th{background:#f5f7fa;text-align:left;padding:8px 10px;font-weight:700;color:#3a4a5a;border-bottom:2px solid #e2e8f0;white-space:nowrap}.tbl td{padding:8px 10px;border-bottom:1px solid #eef1f4;vertical-align:middle}.tbl tbody tr:nth-child(even){background:#fafbfc}.tbl .tl{color:#1f2733}.tbl .tv{font-weight:800}.tbl .rg,.tbl .ra{color:#5b6b7b}.wow.up{color:#1a7f4b;font-weight:700}.wow.down{color:#c0392b;font-weight:700}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.dot.ok{background:#1a7f4b}.dot.bad{background:#c0392b}.lvl{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap}.lvl.l-hot{background:#fdecea;color:#c0392b}.lvl.l-prem{background:#e6f4ec;color:#1a7f4b}.lvl.l-pot{background:#eaf1fb;color:#2b6cb0}.ptbl .pth{width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid #e2e8f0;vertical-align:middle;margin-right:6px}.ptbl a{color:#2b6cb0;font-weight:600;text-decoration:none}.ptbl a:hover{text-decoration:underline}.mut{color:#9aa7b4}.rfoot{text-align:center;color:#9aa7b4;font-size:11px;padding:8px 0 20px}@media print{body{background:#fff}.rprint{display:none}.wrap{padding:0;max-width:none}section{break-inside:avoid;border-color:#ddd}.rhead{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
 function _rptKpi(label, value, type, sub){ var cls=(type==='auto')?'auto':((type==='manual')?'manual':'derived'); var tag=(type==='auto')?'自动':((type==='manual')?'手动':'推算'); return '<div class="kpi '+cls+'"><div class="ktag">'+tag+'</div><div class="klab">'+esc(label)+'</div><div class="kval">'+value+'</div><div class="ksub">'+(sub?esc(sub):'')+'</div></div>'; }
-function _rptWow(wow){ if(wow==null) return '<span class="mut">环比 -</span>'; var up=(wow>=0); return '<span class="wow '+(up?'up':'down')+'">'+(up?'▲ +':'▼ ')+Math.round(wow*100)+'%</span>'; }
+function _rptWow(wow){ if(wow==null) return '<span class="mut">环比 -</span>'; var up=(wow>=0); return '<span class="wow '+(up?'up':'down')+'">'+(up?'▲ +':'▼ ')+Math.round(wow)+'%</span>'; }
 function _rptLevel(lvl){ if(!lvl) return '<span class="mut">-</span>'; var c=(lvl==='爆品')?'l-hot':((lvl==='优品')?'l-prem':'l-pot'); return '<span class="lvl '+c+'">'+esc(lvl)+'</span>'; }
 function _rptProductSection(title, products, cnt){ var arr=products||[]; var H=['<section><h2>'+esc(title)+(cnt!=null?' <span class="cnt">'+cnt+' 个</span>':'')+'</h2>']; if(!arr.length){ H.push('<div class="mut">（无产品）</div></section>'); return H.join(''); } H.push('<table class="tbl ptbl"><thead><tr><th>#</th><th>产品</th><th>分级</th><th>曝光</th><th>点击</th><th>询盘</th><th>TM</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>'); arr.slice(0,100).forEach(function(p,i){ var img=p.main_image?'<img class="pth" loading="lazy" src="'+esc(p.main_image)+'" alt="">':''; var link=p.detail_url?('<a href="'+esc(p.detail_url)+'" target="_blank">'+esc(p.title)+'</a>'):esc(p.title); H.push('<tr><td>'+(i+1)+'</td><td class="tl">'+img+' '+link+'</td><td>'+_rptLevel(p.level)+'</td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.tm)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>'); }); H.push('</tbody></table>'); if(arr.length>100) H.push('<div class="mut" style="margin-top:8px">仅展示前 100 个，共 '+arr.length+' 个</div>'); H.push('</section>'); return H.join(''); }
 function buildReportHTML(view){
