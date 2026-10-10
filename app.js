@@ -1793,7 +1793,21 @@ function _downloadCSV(name, text){
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
   }catch(e){ alert('导出失败: '+(e&&e.message?e.message:e)); }
 }
-function exportView(view){
+function _downloadHTML(name, html){
+  try{
+    var blob=new Blob([html], {type:'text/html;charset=utf-8;'});
+    var url=URL.createObjectURL(blob); var a=document.createElement('a');
+    a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  }catch(e){ alert('导出失败: '+(e&&e.message?e.message:e)); }
+}
+function exportView(view, fmt){
+  if(typeof D==='undefined' || !D){ return; }
+  if(fmt==='csv'){ exportCSV(view); return; }
+  var store=(D.meta&&D.meta.store_id)||'store';
+  _downloadHTML(store+'_'+(view==='boss'?'老板看板':'运营看板')+'_'+(bossPeriodLabel()||'').replace(/[~\-\/\s:]/g,'')+'.html', buildReportHTML(view));
+}
+function exportCSV(view){
   if(typeof D==='undefined' || !D){ return; }
   var meta=D.meta||{}, store=(meta.store_id||''), B=D.boss||{}, k=B.kpi||{}, sp=B.spend||{};
   var plabel=bossPeriodLabel(), ptype=(PERIOD==='month'?'月':'周');
@@ -1857,10 +1871,66 @@ function exportView(view){
   }
   _downloadCSV((store||'store')+'_'+(view==='boss'?'老板看板':'运营看板')+'_'+(plabel||'').replace(/[~\-\/\s:]/g,'')+'.csv', R.join('\r\n'));
 }
+var RPT_CSS='*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#eef1f4;color:#1f2733;font-size:13px}.wrap{max-width:1180px;margin:0 auto;padding:20px}.rhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#16324f;color:#fff;border-radius:12px;padding:18px 22px;margin-bottom:16px}.rt{font-size:20px;font-weight:800}.rs{margin-top:6px;font-size:12px;opacity:.92}.rs b{padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700}.rs .c-g{background:#1a7f4b}.rs .c-o{background:#d98a1f}.rs .c-b{background:#2b6cb0}.rprint{background:#f5c518;color:#1f2733;border:0;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}.rprint:hover{filter:brightness(.96)}section{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:14px}h2{font-size:16px;font-weight:800;color:#16324f;margin:0 0 14px;padding-left:10px;border-left:4px solid #f5c518}h2 .hsub{font-size:12px;font-weight:500;color:#7a8794;margin-left:8px}h2 .cnt{font-size:12px;font-weight:700;color:#2b6cb0;background:#eaf1fb;border-radius:10px;padding:1px 9px;margin-left:6px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:11px}.kpi{position:relative;border:1px solid #e2e8f0;border-left:4px solid #ccc;border-radius:9px;padding:12px 14px}.kpi.auto{border-left-color:#1a7f4b}.kpi.manual{border-left-color:#d98a1f}.kpi.derived{border-left-color:#2b6cb0}.ktag{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px}.kpi.auto .ktag{background:#e6f4ec;color:#1a7f4b}.kpi.manual .ktag{background:#fbf0df;color:#b8741a}.kpi.derived .ktag{background:#eaf1fb;color:#2b6cb0}.klab{color:#5b6b7b;font-size:12px;margin-bottom:6px;padding-right:36px}.kval{font-size:22px;font-weight:800;line-height:1.15}.ksub{margin-top:6px;font-size:11px;color:#8593a1;line-height:1.45;word-break:break-all}.tbl{width:100%;border-collapse:collapse;font-size:12px}.tbl th{background:#f5f7fa;text-align:left;padding:8px 10px;font-weight:700;color:#3a4a5a;border-bottom:2px solid #e2e8f0;white-space:nowrap}.tbl td{padding:8px 10px;border-bottom:1px solid #eef1f4;vertical-align:middle}.tbl tbody tr:nth-child(even){background:#fafbfc}.tbl .tl{color:#1f2733}.tbl .tv{font-weight:800}.tbl .rg,.tbl .ra{color:#5b6b7b}.wow.up{color:#1a7f4b;font-weight:700}.wow.down{color:#c0392b;font-weight:700}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.dot.ok{background:#1a7f4b}.dot.bad{background:#c0392b}.lvl{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap}.lvl.l-hot{background:#fdecea;color:#c0392b}.lvl.l-prem{background:#e6f4ec;color:#1a7f4b}.lvl.l-pot{background:#eaf1fb;color:#2b6cb0}.ptbl .pth{width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid #e2e8f0;vertical-align:middle;margin-right:6px}.ptbl a{color:#2b6cb0;font-weight:600;text-decoration:none}.ptbl a:hover{text-decoration:underline}.mut{color:#9aa7b4}.rfoot{text-align:center;color:#9aa7b4;font-size:11px;padding:8px 0 20px}@media print{body{background:#fff}.rprint{display:none}.wrap{padding:0;max-width:none}section{break-inside:avoid;border-color:#ddd}.rhead{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+function _rptKpi(label, value, type, sub){ var cls=(type==='auto')?'auto':((type==='manual')?'manual':'derived'); var tag=(type==='auto')?'自动':((type==='manual')?'手动':'推算'); return '<div class="kpi '+cls+'"><div class="ktag">'+tag+'</div><div class="klab">'+esc(label)+'</div><div class="kval">'+value+'</div><div class="ksub">'+(sub?esc(sub):'')+'</div></div>'; }
+function _rptWow(wow){ if(wow==null) return '<span class="mut">环比 -</span>'; var up=(wow>=0); return '<span class="wow '+(up?'up':'down')+'">'+(up?'▲ +':'▼ ')+Math.round(wow*100)+'%</span>'; }
+function _rptLevel(lvl){ if(!lvl) return '<span class="mut">-</span>'; var c=(lvl==='爆品')?'l-hot':((lvl==='优品')?'l-prem':'l-pot'); return '<span class="lvl '+c+'">'+esc(lvl)+'</span>'; }
+function _rptProductSection(title, products, cnt){ var arr=products||[]; var H=['<section><h2>'+esc(title)+(cnt!=null?' <span class="cnt">'+cnt+' 个</span>':'')+'</h2>']; if(!arr.length){ H.push('<div class="mut">（无产品）</div></section>'); return H.join(''); } H.push('<table class="tbl ptbl"><thead><tr><th>#</th><th>产品</th><th>分级</th><th>曝光</th><th>点击</th><th>询盘</th><th>TM</th><th>订单</th><th>GMV($)</th></tr></thead><tbody>'); arr.slice(0,100).forEach(function(p,i){ var img=p.main_image?'<img class="pth" loading="lazy" src="'+esc(p.main_image)+'" alt="">':''; var link=p.detail_url?('<a href="'+esc(p.detail_url)+'" target="_blank">'+esc(p.title)+'</a>'):esc(p.title); H.push('<tr><td>'+(i+1)+'</td><td class="tl">'+img+' '+link+'</td><td>'+_rptLevel(p.level)+'</td><td>'+_n(p.imps)+'</td><td>'+_n(p.clicks)+'</td><td>'+_n(p.inquiries)+'</td><td>'+_n(p.tm)+'</td><td>'+_n(p.orders)+'</td><td>'+_n(p.gmv)+'</td></tr>'); }); H.push('</tbody></table>'); if(arr.length>100) H.push('<div class="mut" style="margin-top:8px">仅展示前 100 个，共 '+arr.length+' 个</div>'); H.push('</section>'); return H.join(''); }
+function buildReportHTML(view){
+  var meta=D.meta||{}, B=D.boss||{}, k=B.kpi||{}, sp=B.spend||{};
+  var plabel=bossPeriodLabel(), ptype=(PERIOD==='month'?'月':'周');
+  var fun=getFunnel(), bea=getBearing(), m=getBossManual();
+  var adSpend=(m.ad_spend_override!=null&&m.ad_spend_override!=='')?Number(m.ad_spend_override):(sp.ad_spend||0);
+  var otherSpend=Number(m.annual_fee||0)+Number(m.wendin||0)+Number(m.topshow||0)+Number(m.brand_ad||0);
+  var totalSpend=(adSpend||0)+otherSpend;
+  var acq=Number(m.acquisition||0), qc=Number(m.quality_customers||0);
+  var cac=(m.cac!=null&&m.cac!=='')?Number(m.cac):(acq>0?totalSpend/acq:null);
+  var H=[];
+  H.push('<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(meta.store_name||'')+' '+(view==='boss'?'老板':'运营')+'看板报告</title><style>'+RPT_CSS+'</style></head><body><div class="wrap">');
+  H.push('<div class="rhead"><div><div class="rt">'+(view==='boss'?'👔':'📊')+' '+esc(meta.store_name||'')+' · '+(view==='boss'?'老板看板':'运营看板')+'</div><div class="rs">'+ptype+' · '+esc(plabel)+' · 导出 '+new Date().toLocaleString()+' ｜ <b class="c-g">绿</b>=自动 <b class="c-o">黄</b>=手动 <b class="c-b">蓝</b>=推算</div></div><button class="rprint" onclick="window.print()">🖨 打印 / 存为PDF</button></div>');
+  if(view==='boss'){
+    H.push('<section><h2>💰 花费与获客</h2><div class="cards">');
+    H.push(_rptKpi('广告花费', _m(adSpend), sp.ad_spend_auto?'auto':'manual', 'CPC '+(sp.ad_cpc==null?'-':sp.ad_cpc)+' · 点击 '+(sp.ad_clicks==null?'-':sp.ad_clicks)));
+    H.push(_rptKpi('品牌/其他花费', _m(otherSpend), 'manual', '年费'+(m.annual_fee||0)+' 问鼎'+(m.wendin||0)+' 顶展'+(m.topshow||0)+' 品牌广告'+(m.brand_ad||0)));
+    H.push(_rptKpi('店铺总花费', _m(totalSpend), 'derived', '广告 '+_m(adSpend)+' + 其他 '+_m(otherSpend)));
+    H.push(_rptKpi('获客数量', _n(acq), 'manual', '获客成本分母'));
+    H.push(_rptKpi('优质获客数量', _n(qc), 'manual', '其中优质客户'));
+    H.push(_rptKpi('获客成本', _m(cac), (m.cac!=null&&m.cac!=='')?'manual':'derived', acq>0?'总花费÷获客数量('+acq+')':'填获客数量后自动算'));
+    H.push(_rptKpi('广告平均转化成本', _m(sp.ad_cpl), (sp.ad_cpl!=null&&sp.ad_cpl>0)?'auto':'manual', 'CPL 单商机成本'));
+    H.push(_rptKpi('样品单', _n(m.sample_orders), 'manual', m.sample_products||'运营填写'));
+    H.push(_rptKpi('订单(成交)', _n(k.orders), 'auto', (m.order_products?m.order_products+' · ':'')+'GMV $'+(k.gmv==null?'-':k.gmv)));
+    H.push(_rptKpi('爆品数量', _n(B.hot_count), 'auto', 'prod_level=爆品'));
+    H.push(_rptKpi('优品数量', _n(B.premium_count), 'auto', 'prod_level=优品'));
+    H.push(_rptKpi('潜力优品数量', _n(B.potential_count), 'auto', 'prod_level=潜力优品'));
+    H.push(_rptKpi('新品数量', _n(m.new_count), 'manual', '已点选 '+(m.new_selection||[]).length+' 个产品'));
+    H.push('</div></section>');
+  }
+  H.push('<section><h2>📈 店铺漏斗 <span class="hsub">'+esc(plabel)+' · 每项含 同行优秀/平均 + 较比上周</span></h2><table class="tbl"><thead><tr><th>指标</th><th>本期</th><th>较比上周</th><th>同行优秀</th><th>同行平均</th></tr></thead><tbody>');
+  fun.forEach(function(f){ H.push('<tr><td class="tl">'+esc(f.label)+'</td><td class="tv">'+fmt(f.fmt,f.cur)+'</td><td>'+_rptWow(f.wow)+'</td><td class="rg">'+(f.rival_good==null?'-':fmt(f.fmt,f.rival_good))+'</td><td class="ra">'+(f.rival_avg==null?'-':fmt(f.fmt,f.rival_avg))+'</td></tr>'); });
+  H.push('</tbody></table></section>');
+  H.push('<section><h2>📈 承接效率 <span class="hsub">回复三项 + 访客成交率 vs 同行优秀/平均</span></h2><table class="tbl"><thead><tr><th>指标</th><th>本期</th><th>达标</th><th>同行优秀</th><th>同行平均</th></tr></thead><tbody>');
+  bea.forEach(function(b){ var has=(b.rival_avg!=null); var bad=has?(b.lower_better?(b.cur>b.rival_avg):(b.cur<b.rival_avg)):false; var chip=has?('<span class="dot '+(bad?'bad':'ok')+'"></span>'):'<span class="mut">-</span>'; H.push('<tr><td class="tl">'+chip+' '+esc(b.label)+'</td><td class="tv">'+fmt(b.fmt,b.cur)+'</td><td>'+esc(has?(bad?'未达标':'达标'):'-')+'</td><td class="rg">'+(b.rival_good==null?'-':fmt(b.fmt,b.rival_good))+'</td><td class="ra">'+(b.rival_avg==null?'-':fmt(b.fmt,b.rival_avg))+'</td></tr>'); });
+  H.push('</tbody></table></section>');
+  if(view==='boss'){
+    H.push(_rptProductSection('🔥 爆品', B.hot_products, B.hot_count));
+    H.push(_rptProductSection('⭐ 优品', B.premium_products, B.premium_count));
+    H.push(_rptProductSection('🌱 潜力优品', B.potential_products, B.potential_count));
+    var pool={}; (B.product_pool||[]).forEach(function(p){ pool[p.product_id]=p; });
+    var sel=(m.new_selection||[]).map(function(id){ return pool[id]; }).filter(Boolean);
+    H.push(_rptProductSection('🆕 已选新品', sel, sel.length));
+  } else {
+    H.push('<section><h2>🎧 客服子账号</h2><table class="tbl"><thead><tr><th>子账号</th><th>TM接待</th><th>询盘PV</th><th>成交($)</th><th>成交单</th><th>极速回复率</th><th>及时回复率</th><th>平均回复(h)</th></tr></thead><tbody>');
+    (D.staff_cs||[]).forEach(function(x){ H.push('<tr><td class="tl">'+esc(x.name||'')+'</td><td>'+_n(x.tm)+'</td><td>'+_n(x.fb_pv)+'</td><td>'+_n(x.rcvd_amt)+'</td><td>'+_n(x.order_cnt)+'</td><td>'+(x.fst5min==null?'-':Math.round(x.fst5min*100)+'%')+'</td><td>'+(x.reply_rate==null?'-':Math.round(x.reply_rate*100)+'%')+'</td><td>'+_n(x.avg_reply)+'</td></tr>'); });
+    H.push('</tbody></table></section>');
+  }
+  H.push('<div class="rfoot">Alibaba Growth OS · '+(view==='boss'?'老板':'运营')+'看板数据报告 · 生成于 '+new Date().toLocaleString()+'</div>');
+  H.push('</div></body></html>');
+  return H.join('');
+}
 function initBossView(){
   var sw=document.getElementById('viewSwitch'); if(!sw) return;
   var exBtn=document.getElementById('bossExportBtn');
-  if(exBtn){ exBtn.addEventListener('click', function(){ var s=document.getElementById('bossExportView'); exportView((s&&s.value)||'boss'); }); }
+  if(exBtn){ exBtn.addEventListener('click', function(){ var s=document.getElementById('bossExportView'), f=document.getElementById('bossExportFmt'); exportView((s&&s.value)||'boss', (f&&f.value)||'html'); }); }
   sw.addEventListener('click', function(e){ var b=e.target.closest('.vs-btn'); if(!b) return; setView(b.getAttribute('data-view')); });
   var saved='boss'; try{ saved=localStorage.getItem('gos_view')||'boss'; }catch(e){}
   setView(saved);
