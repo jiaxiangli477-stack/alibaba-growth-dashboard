@@ -1784,7 +1784,6 @@ function setView(v){
 /* ===== 导出 CSV（老板/运营自选，当前周期）===== */
 function _csvCell(v){ v=(v==null?'':String(v)); return '"'+v.replace(/"/g,'""')+'"'; }
 function _csvLine(a){ return a.map(_csvCell).join(','); }
-function _pctStr(x){ return (x==null)?'':(Math.round(x*10)/10)+'%'; }
 function _downloadCSV(name, text){
   try{
     var blob=new Blob(['\uFEFF'+text], {type:'text/csv;charset=utf-8;'});
@@ -1822,27 +1821,24 @@ function exportCSV(view){
   var totalSpend=(adSpend||0)+otherSpend;
   var acq=Number(m.acquisition||0), qc=Number(m.quality_customers||0);
   var cac=(m.cac!=null&&m.cac!=='')?Number(m.cac):(acq>0?totalSpend/acq:null);
-  R.push(_csvLine(['【花费与获客】']));
-  R.push(_csvLine(['指标','值','类型','说明']));
-  R.push(_csvLine(['广告花费', adSpend, sp.ad_spend_auto?'自动·全站推':'手动', 'CPC '+(sp.ad_cpc==null?'':sp.ad_cpc)+' 点击 '+(sp.ad_clicks==null?'':sp.ad_clicks)]));
-  R.push(_csvLine(['品牌/其他花费', otherSpend, '手动', '年费'+(m.annual_fee||0)+' 问鼎'+(m.wendin||0)+' 顶展'+(m.topshow||0)+' 品牌广告'+(m.brand_ad||0)]));
-  R.push(_csvLine(['店铺总花费', totalSpend, '推算', '广告+其他']));
-  R.push(_csvLine(['获客数量', acq, '手动', '获客成本分母']));
-  R.push(_csvLine(['优质获客数量', qc, '手动', '其中优质客户']));
-  R.push(_csvLine(['获客成本', cac==null?'':cac, (m.cac!=null&&m.cac!=='')?'手动':'推算', '总花费÷获客数量']));
-  R.push(_csvLine(['广告平均转化成本(CPL)', sp.ad_cpl==null?'':sp.ad_cpl, '自动', '单商机成本']));
-  R.push(_csvLine(['样品单', m.sample_orders||0, '手动', '数量']));
-  R.push(_csvLine(['订单(成交)', k.orders||0, '自动', 'GMV $'+(k.gmv==null?'':k.gmv)]));
-  R.push(_csvLine(['爆品数量', B.hot_count||0, '自动', '']));
-  R.push(_csvLine(['优品数量', B.premium_count||0, '自动', '']));
-  R.push(_csvLine(['潜力优品数量', B.potential_count||0, '自动', '']));
-  R.push(_csvLine(['新品数量', m.new_count||0, '手动', '']));
-  R.push(_csvLine(['订单产品', m.order_products||'-', '手动', '本周期成交订单对应产品']));
-  R.push(_csvLine(['样品单产品', m.sample_products||'-', '手动', '本周期样品单对应产品']));
-  R.push(_csvLine([]));
-  R.push(_csvLine(['【店铺漏斗】']));
-  R.push(_csvLine(['指标','本期','较比上周','同行优秀','同行平均','备注']));
-  fun.forEach(function(f){ R.push(_csvLine([f.label, fmt(f.fmt,f.cur), f.wow==null?'':_pctStr(f.wow), f.rival_good==null?'':fmt(f.fmt,f.rival_good), f.rival_avg==null?'':fmt(f.fmt,f.rival_avg), f.note||''])); });
+  /* 扁平单表：板块|指标|本期值|较比上周|同行优秀|同行平均|备注（值=原始数字，行顺序每周固定，便于整块复制到对比表 / AI 分析） */
+  R.push(_csvLine(['板块','指标','本期值','较比上周','同行优秀','同行平均','备注']));
+  R.push(_csvLine(['花费与获客','广告花费', adSpend]));
+  R.push(_csvLine(['花费与获客','品牌/其他花费', otherSpend]));
+  R.push(_csvLine(['花费与获客','店铺总花费', totalSpend]));
+  R.push(_csvLine(['花费与获客','获客数量', acq]));
+  R.push(_csvLine(['花费与获客','优质获客数量', qc]));
+  R.push(_csvLine(['花费与获客','获客成本', cac==null?'':cac]));
+  R.push(_csvLine(['花费与获客','广告平均转化成本(CPL)', sp.ad_cpl==null?'':sp.ad_cpl]));
+  R.push(_csvLine(['花费与获客','样品单', m.sample_orders||0]));
+  R.push(_csvLine(['花费与获客','订单(成交)', k.orders||0]));
+  R.push(_csvLine(['花费与获客','爆品数量', B.hot_count||0]));
+  R.push(_csvLine(['花费与获客','优品数量', B.premium_count||0]));
+  R.push(_csvLine(['花费与获客','潜力优品数量', B.potential_count||0]));
+  R.push(_csvLine(['花费与获客','新品数量', m.new_count||0]));
+  R.push(_csvLine(['花费与获客','订单产品', m.order_products||'-']));
+  R.push(_csvLine(['花费与获客','样品单产品', m.sample_products||'-']));
+  fun.forEach(function(f){ R.push(_csvLine(['店铺漏斗', f.label, f.cur==null?'':f.cur, f.wow==null?'':((f.wow>=0)?'+':'')+Math.round(f.wow*10)/10+'%', f.rival_good==null?'':f.rival_good, f.rival_avg==null?'':f.rival_avg, f.note||''])); });
   _downloadCSV((store||'store')+'_'+(view==='boss'?'老板看板':'运营看板')+'_数据留存_'+(plabel||'').replace(/[~\-\/\s:]/g,'')+'.csv', R.join('\r\n'));
 }
 /* ===== Excel 格式化表格导出（ExcelJS：真实 xlsx，带配色/边框/列宽/冻结表头，WPS/Excel 打开即美观）===== */
@@ -1851,8 +1847,7 @@ var XLS_C={ navy:'FF16324F', head:'FF2C4A6E', gold:'FFF5C518', sub:'FF5B6B7B', z
   o:'FFB8741A', oFill:'FFFBF0DF', b:'FF2B6CB0', bFill:'FFEBF1FB', link:'FF2563EB', txt:'FF1F2733' };
 function _xlsBorder(){ return {top:{style:'thin',color:{argb:XLS_C.border}},left:{style:'thin',color:{argb:XLS_C.border}},bottom:{style:'thin',color:{argb:XLS_C.border}},right:{style:'thin',color:{argb:XLS_C.border}}}; }
 function _xNumFmt(f){ if(f==='pct') return '0.00"%"'; if(f==='money') return '"$"#,##0'; return '#,##0'; }
-function _xTypeStyle(t){ if(t==='自动') return {fill:XLS_C.gFill,color:XLS_C.g}; if(t==='手动') return {fill:XLS_C.oFill,color:XLS_C.o}; return {fill:XLS_C.bFill,color:XLS_C.b}; }
-function _xLvlStyle(lvl){ if(lvl==='爆品') return {fill:XLS_C.rFill,color:XLS_C.r}; if(lvl==='优品') return {fill:XLS_C.oFill,color:XLS_C.o}; if(lvl==='潜力优品') return {fill:XLS_C.bFill,color:XLS_C.b}; return null; }
+
 function _xcell(cell, v, o){
   o=o||{};
   var empty=(v==null||v==='');
@@ -1869,19 +1864,13 @@ function _xcell(cell, v, o){
   cell.alignment={horizontal:o.align||'left',vertical:'middle',wrapText:!!o.wrap,indent:1};
   return cell;
 }
-function _xlsBlockHead(ws, row, title){
-  var nC=6, i;
-  ws.mergeCells(row,1,row,nC);
-  for(i=1;i<=nC;i++){ ws.getCell(row,i).fill={type:'pattern',pattern:'solid',fgColor:{argb:XLS_C.gold}}; ws.getCell(row,i).border=_xlsBorder(); }
-  ws.getCell(row,1).value=title; ws.getCell(row,1).font={bold:true,size:12,color:{argb:XLS_C.navy}}; ws.getCell(row,1).alignment={horizontal:'left',vertical:'middle',indent:1};
-  ws.getRow(row).height=24;
-  return row+1;
-}
 function _xlsHeadRow(ws, row, heads){
   ws.getRow(row).height=22;
   heads.forEach(function(h,j){ var c=ws.getCell(row,j+1); c.value=h||'—'; c.font={bold:true,size:11,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XLS_C.head}}; c.alignment={horizontal:'center',vertical:'middle'}; c.border=_xlsBorder(); });
   return row+1;
 }
+/* 数据留存：扁平单表（板块|指标|本期值|较比上周|同行优秀|同行平均|备注）
+   行顺序每周固定、值为原始数字 —— 方便每周整块复制到对比表 / 直接喂 AI 分析 */
 function exportXLSX(view){
   if(typeof D==='undefined' || !D){ return; }
   if(typeof ExcelJS==='undefined'){ alert('ExcelJS 组件未加载（网络拦截了 CDN），请刷新重试，或先选 CSV / HTML报告 导出'); return; }
@@ -1895,73 +1884,69 @@ function exportXLSX(view){
   var totalSpend=(adSpend||0)+otherSpend;
   var acq=Number(m.acquisition||0), qc=Number(m.quality_customers||0);
   var cac=(m.cac!=null&&m.cac!=='')?Number(m.cac):(acq>0?totalSpend/acq:null);
-  var nC=6;
-  var ws=wb.addWorksheet(baseName,{views:[{state:'frozen',ySplit:2}]});
-  ws.columns=[{width:24},{width:16},{width:14},{width:14},{width:14},{width:52}];
+  var nC=7;
+  var ws=wb.addWorksheet(baseName,{views:[{state:'frozen',ySplit:3}]});
+  ws.columns=[{width:14},{width:24},{width:16},{width:12},{width:12},{width:12},{width:26}];
   ws.mergeCells(1,1,1,nC);
   var i;
   for(i=1;i<=nC;i++){ ws.getCell(1,i).fill={type:'pattern',pattern:'solid',fgColor:{argb:XLS_C.navy}}; }
   ws.getCell(1,1).value='📁 '+store+' · '+baseName+' · 数据留存'; ws.getCell(1,1).font={bold:true,size:14,color:{argb:'FFFFFFFF'}}; ws.getCell(1,1).alignment={horizontal:'left',vertical:'middle',indent:1};
   ws.getRow(1).height=30;
   ws.mergeCells(2,1,2,nC);
-  ws.getCell(2,1).value='店铺ID: '+(meta.store_id||'-')+' ｜ 周期: '+ptype+' ｜ 区间: '+plabel+' ｜ 导出: '+new Date().toLocaleString()+' ｜ 绿=自动 黄=手动 蓝=推算';
+  ws.getCell(2,1).value='店铺ID: '+(meta.store_id||'-')+' ｜ 周期: '+ptype+' ｜ 区间: '+plabel+' ｜ 导出: '+new Date().toLocaleString();
   ws.getCell(2,1).font={size:10,color:{argb:XLS_C.sub}};
   ws.getCell(2,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF7FAFC'}};
   ws.getCell(2,1).alignment={horizontal:'left',vertical:'middle',indent:1};
   ws.getRow(2).height=18;
+  _xlsHeadRow(ws,3,['板块','指标','本期值','较比上周','同行优秀','同行平均','备注']);
   var r=4;
-  /* ── 板块一：花费与获客 ── */
-  r=_xlsBlockHead(ws,r,'💰 花费与获客');
-  r=_xlsHeadRow(ws,r,['指标','值','类型','','','说明']);
   var kpiRows=[
-    ['广告花费', adSpend, '"¥"#,##0', sp.ad_spend_auto?'自动':'手动', 'CPC '+(sp.ad_cpc==null?'':sp.ad_cpc)+' 点击 '+(sp.ad_clicks==null?'':sp.ad_clicks)],
-    ['品牌/其他花费', otherSpend, '"¥"#,##0', '手动', '年费'+(m.annual_fee||0)+' 问鼎'+(m.wendin||0)+' 顶展'+(m.topshow||0)+' 品牌广告'+(m.brand_ad||0)],
-    ['店铺总花费', totalSpend, '"¥"#,##0', '推算', '广告 '+adSpend.toFixed(0)+' + 其他 '+otherSpend.toFixed(0)],
-    ['获客数量', acq, '#,##0', '手动', '获客成本分母'],
-    ['优质获客数量', qc, '#,##0', '手动', '其中优质客户'],
-    ['获客成本', cac, '"¥"#,##0.00', (m.cac!=null&&m.cac!=='')?'手动':'推算', acq>0?'总花费÷获客数量('+acq+')':'填获客数量后自动算'],
-    ['广告平均转化成本(CPL)', sp.ad_cpl, '"¥"#,##0.00', '自动', 'CPL 单商机成本'],
-    ['样品单', m.sample_orders, '#,##0', '手动', '数量'],
-    ['订单(成交)', k.orders, '#,##0', '自动', 'GMV $'+(k.gmv==null?'':k.gmv)],
-    ['爆品数量', B.hot_count, '#,##0', '自动', ''],
-    ['优品数量', B.premium_count, '#,##0', '自动', ''],
-    ['潜力优品数量', B.potential_count, '#,##0', '自动', ''],
-    ['新品数量', m.new_count, '#,##0', '手动', '已点选 '+(m.new_selection||[]).length+' 个产品'],
-    ['订单产品', m.order_products||'-', null, '手动', '本周期成交订单对应产品'],
-    ['样品单产品', m.sample_products||'-', null, '手动', '本周期样品单对应产品']
+    ['广告花费', adSpend, '"¥"#,##0'],
+    ['品牌/其他花费', otherSpend, '"¥"#,##0'],
+    ['店铺总花费', totalSpend, '"¥"#,##0'],
+    ['获客数量', acq, '#,##0'],
+    ['优质获客数量', qc, '#,##0'],
+    ['获客成本', cac, '"¥"#,##0.00'],
+    ['广告平均转化成本(CPL)', sp.ad_cpl, '"¥"#,##0.00'],
+    ['样品单', m.sample_orders, '#,##0'],
+    ['订单(成交)', k.orders, '#,##0'],
+    ['爆品数量', B.hot_count, '#,##0'],
+    ['优品数量', B.premium_count, '#,##0'],
+    ['潜力优品数量', B.potential_count, '#,##0'],
+    ['新品数量', m.new_count, '#,##0'],
+    ['订单产品', m.order_products||'-', null],
+    ['样品单产品', m.sample_products||'-', null]
   ];
   kpiRows.forEach(function(row,idx){
     var zf=(idx%2===1)?XLS_C.zebra:null;
     var g=ws.getRow(r);
+    _xcell(g.getCell(1), '花费与获客', {bold:true, align:'center', fill:XLS_C.oFill, color:XLS_C.o});
+    _xcell(g.getCell(2), row[0], {bold:true, fill:zf});
     var isStr=(typeof row[1]==='string');
-    _xcell(g.getCell(1), row[0], {bold:true, fill:zf});
-    _xcell(g.getCell(2), row[1], {numFmt:row[2], bold:true, align:isStr?'center':'right', fill:zf});
-    var ts=_xTypeStyle(row[3]);
-    _xcell(g.getCell(3), row[3], {bold:true, align:'center', fill:ts.fill, color:ts.color});
+    _xcell(g.getCell(3), row[1], {numFmt:row[2], bold:true, align:isStr?'center':'right', fill:zf});
     _xcell(g.getCell(4), '', {dash:false, fill:zf});
     _xcell(g.getCell(5), '', {dash:false, fill:zf});
-    _xcell(g.getCell(6), row[4]||'', {dash:false, color:XLS_C.sub, fill:zf, wrap:true});
+    _xcell(g.getCell(6), '', {dash:false, fill:zf});
+    _xcell(g.getCell(7), '', {dash:false, fill:zf});
     r++;
   });
-  r++;
-  /* ── 板块二：店铺漏斗 ── */
-  r=_xlsBlockHead(ws,r,'📈 店铺漏斗（'+plabel+'）');
-  r=_xlsHeadRow(ws,r,['指标','本期','较比上周','同行优秀','同行平均','备注']);
   (fun||[]).forEach(function(f,idx){
     var zf=(idx%2===1)?XLS_C.zebra:null;
     var g=ws.getRow(r);
-    _xcell(g.getCell(1), f.label, {bold:true, fill:zf});
-    _xcell(g.getCell(2), f.cur, {numFmt:_xNumFmt(f.fmt), bold:true, align:'right', fill:zf});
-    if(f.wow==null){ _xcell(g.getCell(3), '-', {align:'center', color:XLS_C.sub, fill:zf}); }
+    _xcell(g.getCell(1), '店铺漏斗', {bold:true, align:'center', fill:XLS_C.bFill, color:XLS_C.b});
+    _xcell(g.getCell(2), f.label, {bold:true, fill:zf});
+    _xcell(g.getCell(3), f.cur, {numFmt:_xNumFmt(f.fmt), bold:true, align:'right', fill:zf});
+    if(f.wow==null){ _xcell(g.getCell(4), '', {dash:false, fill:zf}); }
     else{
       var up=f.wow>=0, good=f.lower_better?!up:up;
-      _xcell(g.getCell(3), (up?'▲ +':'▼ ')+Math.round(f.wow*10)/10+'%', {bold:true, align:'center', color:good?XLS_C.g:XLS_C.r2, fill:zf});
+      _xcell(g.getCell(4), (up?'+':'')+Math.round(f.wow*10)/10+'%', {align:'right', color:good?XLS_C.g:XLS_C.r2, fill:zf});
     }
-    _xcell(g.getCell(4), f.rival_good, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
-    _xcell(g.getCell(5), f.rival_avg, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
-    _xcell(g.getCell(6), f.note||'', {dash:false, color:XLS_C.sub, fill:zf, wrap:true});
+    _xcell(g.getCell(5), f.rival_good, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
+    _xcell(g.getCell(6), f.rival_avg, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
+    _xcell(g.getCell(7), f.note||'', {dash:false, color:XLS_C.sub, fill:zf});
     r++;
   });
+  ws.autoFilter={from:{row:3,column:1},to:{row:r-1,column:nC}};
   wb.xlsx.writeBuffer().then(function(buf){
     _downloadXLSX(store+'_'+baseName+'_数据留存_'+(plabel||'').replace(/[~\-\/\s:]/g,'')+'.xlsx', buf);
   }).catch(function(e){ alert('Excel 导出失败: '+(e&&e.message?e.message:e)); });
