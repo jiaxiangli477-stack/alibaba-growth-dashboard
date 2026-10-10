@@ -1812,7 +1812,7 @@ function exportCSV(view){
   var meta=D.meta||{}, store=(window.V4_STORE||meta.store_id||'store'), B=D.boss||{}, k=B.kpi||{}, sp=B.spend||{};
   var plabel=bossPeriodLabel(), ptype=(PERIOD==='month'?'月':'周');
   var R=[];
-  R.push(_csvLine(['店铺', meta.store_name||store, '店铺代码', store, '周期', ptype, '区间', plabel, '导出时间', new Date().toLocaleString()]));
+  R.push(_csvLine(['店铺', meta.store_name||store, '店铺代码', store, '周期', ptype+_periodWeekTag(), '区间', plabel, '导出时间', new Date().toLocaleString()]));
   R.push(_csvLine([]));
   var fun=getFunnel();
   var m=getBossManual();
@@ -1821,8 +1821,8 @@ function exportCSV(view){
   var totalSpend=(adSpend||0)+otherSpend;
   var acq=Number(m.acquisition||0), qc=Number(m.quality_customers||0);
   var cac=(m.cac!=null&&m.cac!=='')?Number(m.cac):(acq>0?totalSpend/acq:null);
-  /* 扁平单表：板块|指标|本期值|同行优秀|同行平均|备注（值=原始数字，行顺序每周固定，便于整块复制到对比表 / AI 分析） */
-  R.push(_csvLine(['板块','指标','本期值','同行优秀','同行平均','备注']));
+  /* 扁平单表：板块|指标|本期值|同行优秀|同行平均（值=原始数字，行顺序每周固定，便于整块复制到对比表 / AI 分析） */
+  R.push(_csvLine(['板块','指标','本期值','同行优秀','同行平均']));
   R.push(_csvLine(['花费与获客','广告花费', adSpend]));
   R.push(_csvLine(['花费与获客','品牌/其他花费', otherSpend]));
   R.push(_csvLine(['花费与获客','店铺总花费', totalSpend]));
@@ -1838,7 +1838,7 @@ function exportCSV(view){
   R.push(_csvLine(['花费与获客','新品数量', m.new_count||0]));
   R.push(_csvLine(['花费与获客','订单产品', m.order_products||'-']));
   R.push(_csvLine(['花费与获客','样品单产品', m.sample_products||'-']));
-  fun.forEach(function(f){ R.push(_csvLine(['店铺漏斗', f.label, f.cur==null?'':f.cur, f.rival_good==null?'':f.rival_good, f.rival_avg==null?'':f.rival_avg, f.note||''])); });
+  fun.forEach(function(f){ R.push(_csvLine(['店铺漏斗', f.label, f.cur==null?'':f.cur, f.rival_good==null?'':f.rival_good, f.rival_avg==null?'':f.rival_avg])); });
   _downloadCSV((store||'store')+'_'+(view==='boss'?'老板看板':'运营看板')+'_数据留存_'+(plabel||'').replace(/[~\-\/\s:]/g,'')+'.csv', R.join('\r\n'));
 }
 /* ===== Excel 格式化表格导出（ExcelJS：真实 xlsx，带配色/边框/列宽/冻结表头，WPS/Excel 打开即美观）===== */
@@ -1847,6 +1847,24 @@ var XLS_C={ navy:'FF16324F', head:'FF2C4A6E', gold:'FFF5C518', sub:'FF5B6B7B', z
   o:'FFB8741A', oFill:'FFFBF0DF', b:'FF2B6CB0', bFill:'FFEBF1FB', link:'FF2563EB', txt:'FF1F2733' };
 function _xlsBorder(){ return {top:{style:'thin',color:{argb:XLS_C.border}},left:{style:'thin',color:{argb:XLS_C.border}},bottom:{style:'thin',color:{argb:XLS_C.border}},right:{style:'thin',color:{argb:XLS_C.border}}}; }
 function _xNumFmt(f){ if(f==='pct') return '0.00"%"'; if(f==='money') return '"$"#,##0'; return '#,##0'; }
+function _isoWeek(dstr){
+  try{
+    var d=new Date(dstr+'T00:00:00Z'), day=(d.getUTCDay()+6)%7;
+    d.setUTCDate(d.getUTCDate()-day+3);
+    var ft=new Date(Date.UTC(d.getUTCFullYear(),0,4)), fd=(ft.getUTCDay()+6)%7;
+    ft.setUTCDate(ft.getUTCDate()-fd+3);
+    return 1+Math.round((d-ft)/(7*86400000));
+  }catch(e){ return null; }
+}
+function _periodWeekTag(){
+  if(PERIOD!=='week') return '';
+  var ds='';
+  try{ var w=selectedWeek(); if(w&&w.week_start) ds=w.week_start; }catch(e){}
+  if(!ds){ var pm=(bossPeriodLabel()||'').match(/\d{4}-\d{2}-\d{2}/); ds=pm?pm[0]:''; }
+  if(!ds) return '';
+  var wn=_isoWeek(ds);
+  return wn?('（第'+wn+'自然周 · W'+wn+'）'):'';
+}
 
 function _xcell(cell, v, o){
   o=o||{};
@@ -1887,7 +1905,7 @@ function _xlsSheetHead(ws, nC, store, blockName, sKey, ptype, plabel){
   ws.getCell(2,1).border=_xlsBorder();
   ws.mergeCells(2,2,2,nC);
   for(i=2;i<=nC;i++){ ws.getCell(2,i).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF2C4A6E'}}; ws.getCell(2,i).border=_xlsBorder(); }
-  ws.getCell(2,2).value='📅 周期: '+ptype+' ｜ 📆 区间: '+plabel;
+  ws.getCell(2,2).value='📅 周期: '+ptype+_periodWeekTag()+' ｜ 📆 区间: '+plabel;
   ws.getCell(2,2).font={size:11,bold:true,color:{argb:'FFFFFFFF'}};
   ws.getCell(2,2).alignment={horizontal:'center',vertical:'middle'};
 }
@@ -1937,11 +1955,11 @@ function exportXLSX(view){
     r++;
   });
   ws1.autoFilter={from:{row:3,column:1},to:{row:r-1,column:2}};
-  /* ── 表2：店铺漏斗（指标|本期值|同行优秀|同行平均|备注）── */
+  /* ── 表2：店铺漏斗（指标|本期值|同行优秀|同行平均）── */
   var ws2=wb.addWorksheet('店铺漏斗',{views:[{state:'frozen',ySplit:3}]});
-  ws2.columns=[{width:22},{width:14},{width:12},{width:12},{width:24}];
-  _xlsSheetHead(ws2,5, store, '店铺漏斗', sKey, ptype, plabel);
-  _xlsHeadRow(ws2,3,['指标','本期值','同行优秀','同行平均','备注']);
+  ws2.columns=[{width:22},{width:14},{width:12},{width:14}];
+  _xlsSheetHead(ws2,4, store, '店铺漏斗', sKey, ptype, plabel);
+  _xlsHeadRow(ws2,3,['指标','本期值','同行优秀','同行平均']);
   var r2=4;
   (fun||[]).forEach(function(f,idx){
     var zf=(idx%2===1)?XLS_C.zebra:null;
@@ -1950,10 +1968,9 @@ function exportXLSX(view){
     _xcell(g.getCell(2), f.cur, {numFmt:_xNumFmt(f.fmt), bold:true, align:'right', fill:zf});
     _xcell(g.getCell(3), f.rival_good, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
     _xcell(g.getCell(4), f.rival_avg, {numFmt:_xNumFmt(f.fmt), align:'right', fill:zf});
-    _xcell(g.getCell(5), f.note||'', {dash:false, color:XLS_C.sub, fill:zf});
     r2++;
   });
-  ws2.autoFilter={from:{row:3,column:1},to:{row:r2-1,column:5}};
+  ws2.autoFilter={from:{row:3,column:1},to:{row:r2-1,column:4}};
   wb.xlsx.writeBuffer().then(function(buf){
     _downloadXLSX(store+'_'+baseName+'_数据留存_'+(plabel||'').replace(/[~\-\/\s:]/g,'')+'.xlsx', buf);
   }).catch(function(e){ alert('Excel 导出失败: '+(e&&e.message?e.message:e)); });
@@ -1981,7 +1998,7 @@ function buildReportHTML(view){
   var H=[];
   var baseName=(view==='boss'?'老板看板':'运营看板');
   H.push('<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(meta.store_name||'')+' '+baseName+' 数据留存</title><style>'+RPT_CSS+'</style></head><body><div class="wrap">');
-  H.push('<div class="rhead"><div><div class="rt">📁 '+esc(meta.store_name||'')+' · '+baseName+' · 数据留存</div><div class="rs">店铺 '+esc(window.V4_STORE||meta.store_id||'-')+' ｜ '+ptype+' · '+esc(plabel)+' · 导出 '+new Date().toLocaleString()+' ｜ <b class="c-g">绿</b>=自动 <b class="c-o">黄</b>=手动 <b class="c-b">蓝</b>=推算</div></div><button class="rprint" onclick="window.print()">🖨 打印 / 存为PDF</button></div>');
+  H.push('<div class="rhead"><div><div class="rt">📁 '+esc(meta.store_name||'')+' · '+baseName+' · 数据留存</div><div class="rs">店铺 '+esc(window.V4_STORE||meta.store_id||'-')+' ｜ '+ptype+esc(_periodWeekTag())+' · '+esc(plabel)+' · 导出 '+new Date().toLocaleString()+' ｜ <b class="c-g">绿</b>=自动 <b class="c-o">黄</b>=手动 <b class="c-b">蓝</b>=推算</div></div><button class="rprint" onclick="window.print()">🖨 打印 / 存为PDF</button></div>');
   H.push('<section><h2>💰 花费与获客</h2><div class="cards">');
   H.push(_rptKpi('广告花费', _m(adSpend), sp.ad_spend_auto?'auto':'manual', 'CPC '+(sp.ad_cpc==null?'-':sp.ad_cpc)+' · 点击 '+(sp.ad_clicks==null?'-':sp.ad_clicks)));
   H.push(_rptKpi('品牌/其他花费', _m(otherSpend), 'manual', '年费'+(m.annual_fee||0)+' 问鼎'+(m.wendin||0)+' 顶展'+(m.topshow||0)+' 品牌广告'+(m.brand_ad||0)));
@@ -2000,8 +2017,8 @@ function buildReportHTML(view){
   H.push('<div class="banner">🧾 订单产品：<b>'+esc(m.order_products||'-')+'</b><span class="bmut">（本周期成交订单对应产品）</span></div>');
   H.push('<div class="banner">🧪 样品单产品：<b>'+esc(m.sample_products||'-')+'</b><span class="bmut">（本周期样品单对应产品）</span></div>');
   H.push('</section>');
-  H.push('<section><h2>📈 店铺漏斗 <span class="hsub">'+esc(plabel)+' · 每项含 同行优秀/平均 + 较比上周</span></h2><table class="tbl"><thead><tr><th>指标</th><th>本期</th><th>较比上周</th><th>同行优秀</th><th>同行平均</th><th>备注</th></tr></thead><tbody>');
-  fun.forEach(function(f){ H.push('<tr><td class="tl">'+esc(f.label)+'</td><td class="tv">'+fmt(f.fmt,f.cur)+'</td><td>'+_rptWow(f.wow)+'</td><td class="rg">'+(f.rival_good==null?'-':fmt(f.fmt,f.rival_good))+'</td><td class="ra">'+(f.rival_avg==null?'-':fmt(f.fmt,f.rival_avg))+'</td><td class="mut">'+esc(f.note||'')+'</td></tr>'); });
+  H.push('<section><h2>📈 店铺漏斗 <span class="hsub">'+esc(plabel)+' · 每项含 同行优秀/平均 + 较比上周</span></h2><table class="tbl"><thead><tr><th>指标</th><th>本期</th><th>较比上周</th><th>同行优秀</th><th>同行平均</th></tr></thead><tbody>');
+  fun.forEach(function(f){ H.push('<tr><td class="tl">'+esc(f.label)+'</td><td class="tv">'+fmt(f.fmt,f.cur)+'</td><td>'+_rptWow(f.wow)+'</td><td class="rg">'+(f.rival_good==null?'-':fmt(f.fmt,f.rival_good))+'</td><td class="ra">'+(f.rival_avg==null?'-':fmt(f.fmt,f.rival_avg))+'</td></tr>'); });
   H.push('</tbody></table></section>');
   H.push('<div class="rfoot">Alibaba Growth OS · '+baseName+' 数据留存报告 · 生成于 '+new Date().toLocaleString()+'</div>');
   H.push('</div></body></html>');
